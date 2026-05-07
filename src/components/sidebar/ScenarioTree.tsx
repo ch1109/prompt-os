@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useScenarios } from "@/hooks/useScenarios";
 import { useUI } from "@/store/uiStore";
 import type { Scenario } from "@/types";
@@ -9,7 +10,7 @@ export function ScenarioTree() {
   const roots = all.filter((s) => s.parentId === null);
   const childrenOf = (pid: string) => all.filter((s) => s.parentId === pid);
 
-  const renderNode = (s: Scenario, depth = 0): JSX.Element => (
+  const renderNode = (s: Scenario, depth = 0): ReactElement => (
     <li key={s.id}>
       <button
         onClick={() => setSelectedScenario(s.id)}
