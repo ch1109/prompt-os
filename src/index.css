@@ -8,3 +8,19 @@ body {
   color: hsl(222 47% 11%);
   background: hsl(0 0% 100%);
 }
+
+.input {
+  @apply w-full rounded-md border border-border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.page-enter { animation: fadeIn 180ms ease; }
+
+@keyframes slideInRight {
+  from { transform: translateX(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.detail-enter { animation: slideInRight 160ms ease; }
