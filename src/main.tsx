@@ -3,9 +3,10 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import "./index.css";
 import { router } from "./router";
-import { seedDefaultScenarios } from "@/db/seed";
+import { seedDefaultScenarios, seedPromptsFromFile } from "@/db/seed";
 
 seedDefaultScenarios();
+seedPromptsFromFile();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
