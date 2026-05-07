@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  font-family: -apple-system, "SF Pro", "PingFang SC", system-ui, sans-serif;
+  color: hsl(222 47% 11%);
+  background: hsl(0 0% 100%);
+}
