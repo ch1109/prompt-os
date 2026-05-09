@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Copy, Star, Trash2, Pencil, Check, X } from "lucide-react";
+import { Copy, Star, Trash2, Pencil, Check, X, Layers } from "lucide-react";
 import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { deletePrompt, incrementUseCount, toggleFavorite } from "@/db/repos/promptRepo";
+import { UsePromptDialog } from "./UsePromptDialog";
+import { confirm } from "@/store/confirmStore";
+import { MarkdownView } from "@/components/MarkdownView";
 
 interface Props {
   onEdit: (id: string) => void;
@@ -12,6 +15,7 @@ interface Props {
 export function PromptDetail({ onEdit }: Props) {
   const { selectedPromptId, setSelectedPrompt } = useUI();
   const [copied, setCopied] = useState(false);
+  const [useWithContextOpen, setUseWithContextOpen] = useState(false);
 
   const p = useLiveQuery(
     () => (selectedPromptId ? db.prompts.get(selectedPromptId) : undefined),
@@ -20,7 +24,7 @@ export function PromptDetail({ onEdit }: Props) {
 
   if (!p) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-foreground/40">
+      <div className="flex h-full items-center justify-center p-8 text-center text-[13px] text-hint">
         选择左侧卡片查看详情
       </div>
     );
@@ -35,56 +39,91 @@ export function PromptDetail({ onEdit }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(`确认删除「${p?.title}」？`)) return;
+    const ok = await confirm({
+      title: "确认删除这条 Prompt？",
+      message: `「${p?.title}」删除后无法恢复。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
     await deletePrompt(p!.id);
     setSelectedPrompt(null);
   }
 
   return (
-    <div className="space-y-4 p-4 text-sm">
+    <div className="space-y-5 p-5 text-[13.5px]">
       {/* 标题行 */}
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-base font-semibold leading-snug">{p.title}</h2>
-        <div className="flex shrink-0 gap-1.5">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="serif text-[19px] font-semibold leading-snug tracking-tight text-ink">
+          {p.title}
+        </h2>
+        <div className="flex shrink-0 gap-0.5 [&_button]:rounded [&_button]:p-1.5 [&_button:hover]:bg-soft">
           <button onClick={() => toggleFavorite(p.id)} title="收藏">
-            <Star size={16} className={p.isFavorited ? "fill-yellow-400 text-yellow-400" : "text-foreground/40 hover:text-yellow-400"} />
+            <Star
+              size={15}
+              strokeWidth={1.6}
+              className={p.isFavorited ? "fill-amber text-amber" : "text-hint hover:text-amber"}
+            />
           </button>
           <button onClick={() => onEdit(p.id)} title="编辑">
-            <Pencil size={16} className="text-foreground/40 hover:text-accent" />
+            <Pencil size={15} strokeWidth={1.6} className="text-hint hover:text-moss" />
           </button>
           <button onClick={handleDelete} title="删除">
-            <Trash2 size={16} className="text-foreground/40 hover:text-red-500" />
+            <Trash2 size={15} strokeWidth={1.6} className="text-hint hover:text-red-500" />
           </button>
           <button onClick={() => setSelectedPrompt(null)} title="关闭">
-            <X size={16} className="text-foreground/40 hover:text-foreground" />
+            <X size={15} strokeWidth={1.6} className="text-hint hover:text-ink" />
           </button>
         </div>
       </div>
 
       {/* 元信息 */}
       <div className="flex flex-wrap gap-1.5">
-        <Badge accent>{p.taskType}</Badge>
-        <Badge>{p.difficulty}</Badge>
-        <Badge>{p.valueLevel}</Badge>
+        <span className="chip chip-task chip-mono uppercase tracking-wider2">{p.taskType}</span>
+        <span className="chip chip-mono">{p.difficulty}</span>
+        <span className="chip chip-mono">{p.valueLevel}</span>
       </div>
 
       {/* 正文 */}
       <Field label="正文">
-        <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed">
-          {p.body}
-        </pre>
-        <button
-          onClick={handleCopy}
-          className="mt-2 inline-flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? "已复制" : "复制正文"}
-        </button>
+        <div className="max-h-72 overflow-y-auto rounded border border-line bg-canvas px-3.5 py-2.5">
+          <MarkdownView text={p.body} />
+        </div>
+        <div className="mt-2.5 flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 rounded bg-moss px-3 py-1.5 text-[12px] font-medium text-paper transition hover:bg-moss/90"
+          >
+            {copied ? <Check size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={2} />}
+            {copied ? "已复制" : "复制正文"}
+          </button>
+          <button
+            onClick={() => setUseWithContextOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-1.5 text-[12px] font-medium text-sub transition hover:bg-soft hover:text-ink"
+          >
+            <Layers size={12} strokeWidth={1.8} /> 带上下文使用
+          </button>
+        </div>
       </Field>
+      {useWithContextOpen && (
+        <UsePromptDialog prompt={p} onClose={() => setUseWithContextOpen(false)} />
+      )}
 
       {p.summary && <Field label="摘要">{p.summary}</Field>}
+      {p.taskIntent && <Field label="任务意图">{p.taskIntent}</Field>}
       {p.primaryScenario.length > 0 && (
-        <Field label="主场景">{p.primaryScenario.join(" / ")}</Field>
+        <Field label="主场景">
+          <span className="mono text-[12.5px] text-ink/80">{p.primaryScenario.join(" / ")}</span>
+        </Field>
+      )}
+      {p.secondaryScenarios?.length > 0 && (
+        <Field label="副场景">
+          <div className="space-y-1">
+            {p.secondaryScenarios.map((sp, i) => (
+              <div key={i} className="mono text-[12px] text-sub">{sp.join(" / ")}</div>
+            ))}
+          </div>
+        </Field>
       )}
       {p.inputRequirements && <Field label="输入要求">{p.inputRequirements}</Field>}
       {p.outputFormat && <Field label="输出格式">{p.outputFormat}</Field>}
@@ -94,17 +133,29 @@ export function PromptDetail({ onEdit }: Props) {
         <Field label="标签">
           <div className="flex flex-wrap gap-1">
             {p.tags.map((t) => (
-              <span key={t} className="rounded bg-muted px-2 py-0.5 text-xs">
-                {t}
-              </span>
+              <span key={t} className="chip">{t}</span>
             ))}
           </div>
         </Field>
       )}
 
+      {(p.upstreamPrompts?.length > 0 || p.downstreamPrompts?.length > 0) && (
+        <Field label="任务流">
+          <div className="space-y-2.5">
+            {p.upstreamPrompts?.length > 0 && (
+              <RelationList label="上游" ids={p.upstreamPrompts} onSelect={setSelectedPrompt} />
+            )}
+            {p.downstreamPrompts?.length > 0 && (
+              <RelationList label="下游" ids={p.downstreamPrompts} onSelect={setSelectedPrompt} />
+            )}
+          </div>
+        </Field>
+      )}
+
       <Field label="使用 / 上次">
-        {p.useCount} 次 /{" "}
-        {p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString("zh-CN") : "从未使用"}
+        <span className="mono text-[12px] text-sub">
+          {p.useCount} 次 / {p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString("zh-CN") : "从未使用"}
+        </span>
       </Field>
     </div>
   );
@@ -113,22 +164,42 @@ export function PromptDetail({ onEdit }: Props) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1 text-xs font-medium uppercase tracking-wider text-foreground/40">
+      <div className="mono mb-1.5 text-[10.5px] font-medium uppercase tracking-wider2 text-hint">
         {label}
       </div>
-      <div className="text-sm">{children}</div>
+      <div className="text-[13.5px] leading-relaxed text-ink/90">{children}</div>
     </div>
   );
 }
 
-function Badge({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
+function RelationList({
+  label,
+  ids,
+  onSelect,
+}: {
+  label: string;
+  ids: string[];
+  onSelect: (id: string | null) => void;
+}) {
+  const items = useLiveQuery(() => db.prompts.bulkGet(ids), [ids.join(",")]) ?? [];
   return (
-    <span
-      className={`rounded px-2 py-0.5 text-xs font-medium ${
-        accent ? "bg-accent/10 text-accent" : "bg-muted text-foreground/60"
-      }`}
-    >
-      {children}
-    </span>
+    <div>
+      <div className="mb-1 text-[11px] uppercase tracking-wider2 text-hint">{label}</div>
+      <div className="space-y-1">
+        {items.map((p, i) =>
+          p ? (
+            <button
+              key={p.id}
+              onClick={() => onSelect(p.id)}
+              className="block w-full rounded border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-sub transition hover:border-moss/30 hover:bg-soft hover:text-ink"
+            >
+              {p.title}
+            </button>
+          ) : (
+            <div key={i} className="text-[11px] text-hint">（已删除）</div>
+          )
+        )}
+      </div>
+    </div>
   );
 }

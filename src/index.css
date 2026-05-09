@@ -2,25 +2,124 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 调色板由 CSS 变量驱动，:root 为亮色，:root.dark 为暗色。
+   所有 Tailwind token（canvas/paper/ink/...）都引用这些变量，
+   切换 .dark 类即可整站换色。 */
+:root {
+  --canvas: 250 250 247;     /* 暖象牙背景 */
+  --paper: 255 255 255;      /* 卡片白 */
+  --ink: 39 39 42;           /* 主文字墨黑 */
+  --sub: 82 82 91;           /* 次要文字 */
+  --hint: 161 161 170;       /* 提示 */
+  --line: 234 232 227;       /* 极淡暖灰边框 */
+  --soft: 242 240 234;       /* hover 软背景 */
+  --moss: 31 69 54;          /* 强调色：深墨绿 */
+  --moss-soft: 232 239 233;
+  --amber: 180 83 9;
+  --amber-soft: 254 243 199;
+  --scrollbar: 39 39 42;
+  --scrollbar-alpha: 0.18;
+}
+:root.dark {
+  --canvas: 24 24 27;        /* 接近 zinc-900，微暖 */
+  --paper: 39 39 42;         /* zinc-800 */
+  --ink: 244 244 245;        /* 反转主字 */
+  --sub: 161 161 170;        /* zinc-400 */
+  --hint: 113 113 122;       /* zinc-500 */
+  --line: 63 63 70;          /* zinc-700 */
+  --soft: 52 52 59;          /* zinc-750 微亮于 paper */
+  --moss: 134 187 158;       /* 调亮的苔绿 */
+  --moss-soft: 31 69 54;     /* 暗模式下用深 moss 做 soft 底 */
+  --amber: 252 211 77;       /* amber-300 */
+  --amber-soft: 87 56 7;     /* amber-900 */
+  --scrollbar: 244 244 245;
+  --scrollbar-alpha: 0.22;
+}
+
 html, body, #root { height: 100%; }
 body {
-  font-family: -apple-system, "SF Pro", "PingFang SC", system-ui, sans-serif;
-  color: hsl(222 47% 11%);
-  background: hsl(0 0% 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", system-ui, sans-serif;
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern", "liga", "calt", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+/* Notion 式滚动条：极细、半透明、悬浮才显形 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*:hover > ::-webkit-scrollbar-thumb,
+*:focus-within > ::-webkit-scrollbar-thumb {
+  background: rgb(var(--scrollbar) / var(--scrollbar-alpha));
+  background-clip: padding-box;
 }
 
 .input {
-  @apply w-full rounded-md border border-border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30;
+  width: 100%;
+  border-radius: 0.25rem;
+  border: 1px solid rgb(var(--line));
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
+  padding: 0.375rem 0.625rem;
+  font-size: 0.875rem;
+  transition: border-color 160ms, box-shadow 160ms;
 }
+.input:focus {
+  outline: none;
+  border-color: rgb(var(--moss) / 0.55);
+  box-shadow: 0 0 0 3px rgb(var(--moss) / 0.18);
+}
+
+/* 用衬线字体作为标志 / 标题级强调，区别于通体 sans */
+.serif { font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, ui-serif, serif; }
+
+/* 等宽用于标签和 logo，制造印刷质感 */
+.mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; font-feature-settings: "ss01", "ss02"; }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: none; }
 }
-.page-enter { animation: fadeIn 180ms ease; }
+.page-enter { animation: fadeIn 220ms cubic-bezier(0.22, 0.61, 0.36, 1); }
 
 @keyframes slideInRight {
-  from { transform: translateX(12px); opacity: 0; }
+  from { transform: translateX(8px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
-.detail-enter { animation: slideInRight 160ms ease; }
+.detail-enter { animation: slideInRight 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+/* 卡片基础态：无强边框，用浅色把它和画布稍稍区分；hover 仅靠背景与极轻阴影提示 */
+.card-flat {
+  background: rgb(var(--paper));
+  border: 1px solid transparent;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 200ms ease;
+  /* 浏览器原生「视口外懒渲染」：未进入视口的卡片跳过布局/绘制，
+     大量卡片场景（如 165+）下可显著降低首屏渲染开销。
+     contain-intrinsic-size 给一个估计高度，避免滚动条跳动。 */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 160px;
+}
+.card-flat:hover {
+  border-color: rgb(var(--line));
+  box-shadow: 0 1px 2px rgb(var(--ink) / 0.04), 0 4px 12px -6px rgb(var(--ink) / 0.06);
+}
+
+/* 标签胶囊（极简 Notion 风：浅暖底 + 灰字） */
+.chip {
+  @apply inline-flex items-center rounded-sm px-1.5 py-0.5 text-2xs font-medium;
+  background: rgb(var(--soft));
+  color: rgb(var(--sub));
+}
+.chip-mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; letter-spacing: 0; }
+.chip-task {
+  background: rgb(var(--moss-soft));
+  color: rgb(var(--moss));
+}

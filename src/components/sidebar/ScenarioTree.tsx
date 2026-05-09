@@ -1,33 +1,69 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
+import { ChevronRight } from "lucide-react";
 import { useScenarios } from "@/hooks/useScenarios";
 import { useUI } from "@/store/uiStore";
 import type { Scenario } from "@/types";
 
 export function ScenarioTree() {
   const all = useScenarios();
-  const { selectedScenarioId, setSelectedScenario } = useUI();
+  const selectedScenarioId = useUI((s) => s.selectedScenarioId);
+  const setSelectedScenario = useUI((s) => s.setSelectedScenario);
+  // 默认折叠所有；用户选中某个节点时其祖先链自动展开
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const roots = all.filter((s) => s.parentId === null);
   const childrenOf = (pid: string) => all.filter((s) => s.parentId === pid);
 
-  const renderNode = (s: Scenario, depth = 0): ReactElement => (
-    <li key={s.id}>
-      <button
-        onClick={() => setSelectedScenario(s.id)}
-        style={{ paddingLeft: 8 + depth * 12 }}
-        className={`w-full rounded py-1 pr-2 text-left text-sm transition-colors ${
-          selectedScenarioId === s.id
-            ? "bg-muted font-medium text-foreground"
-            : "text-foreground/70 hover:bg-muted/60 hover:text-foreground"
-        }`}
-      >
-        {s.title}
-      </button>
-      {childrenOf(s.id).length > 0 && (
-        <ul>{childrenOf(s.id).map((c) => renderNode(c, depth + 1))}</ul>
-      )}
-    </li>
-  );
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
-  return <ul className="py-1">{roots.map((r) => renderNode(r))}</ul>;
+  const renderNode = (s: Scenario, depth = 0): ReactElement => {
+    const kids = childrenOf(s.id);
+    const isExpanded = expanded.has(s.id);
+    const isActive = selectedScenarioId === s.id;
+    const hasChildren = kids.length > 0;
+
+    return (
+      <li key={s.id}>
+        <div
+          className={`group flex items-center rounded text-[13px] transition-colors ${
+            isActive ? "bg-soft font-medium text-ink" : "text-sub hover:bg-soft/70 hover:text-ink"
+          }`}
+          style={{ paddingLeft: 4 + depth * 12 }}
+        >
+          <button
+            onClick={() => hasChildren && toggle(s.id)}
+            className="flex h-6 w-5 shrink-0 items-center justify-center text-hint hover:text-ink"
+            aria-label={isExpanded ? "折叠" : "展开"}
+          >
+            {hasChildren ? (
+              <ChevronRight
+                size={12}
+                strokeWidth={2}
+                className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              />
+            ) : null}
+          </button>
+          <button
+            onClick={() => setSelectedScenario(s.id)}
+            className={`flex-1 truncate py-[5px] pr-2 text-left ${
+              depth === 0 ? "font-medium tracking-tight" : ""
+            }`}
+            title={s.title}
+          >
+            {s.title}
+          </button>
+        </div>
+        {hasChildren && isExpanded && (
+          <ul className="space-y-px">{kids.map((c) => renderNode(c, depth + 1))}</ul>
+        )}
+      </li>
+    );
+  };
+
+  return <ul className="space-y-px">{roots.map((r) => renderNode(r))}</ul>;
 }

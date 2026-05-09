@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Sparkles, X } from "lucide-react";
 import { db } from "@/db";
 import { createPrompt, updatePrompt } from "@/db/repos/promptRepo";
+import { suggestTitle } from "@/services/titleSuggester";
+import { toast } from "@/store/toastStore";
 import type { Difficulty, Prompt, TaskType, ValueLevel } from "@/types";
 
 const TASK_TYPES: TaskType[] = ["分析", "生成", "改写", "总结", "规划", "决策", "复盘"];
@@ -33,6 +36,8 @@ interface Props {
 
 export function PromptEditor({ open, editId, onClose }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [naming, setNaming] = useState(false);
+  const allContexts = useLiveQuery(() => db.contexts.toArray()) ?? [];
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +57,7 @@ export function PromptEditor({ open, editId, onClose }: Props) {
 
   async function submit() {
     if (!form.title.trim() || !form.body.trim()) {
-      alert("标题和正文不能为空");
+      toast.error("标题和正文不能为空");
       return;
     }
     if (editId) {
@@ -63,24 +68,57 @@ export function PromptEditor({ open, editId, onClose }: Props) {
     onClose();
   }
 
+  async function handleAINaming() {
+    if (!form.body.trim()) {
+      toast.error("请先填写正文");
+      return;
+    }
+    setNaming(true);
+    try {
+      const r = await suggestTitle(form.body);
+      setForm((f) => ({
+        ...f,
+        title: r.title || f.title,
+        summary: f.summary?.trim() ? f.summary : r.summary || f.summary,
+      }));
+      toast.success("已为你生成标题与摘要");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI 起名失败");
+    } finally {
+      setNaming(false);
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{editId ? "编辑" : "新建"} Prompt</h3>
-          <button onClick={onClose}>
-            <X size={18} className="text-foreground/40 hover:text-foreground" />
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-ink/40 md:items-center md:p-4">
+      <div className="flex w-full max-w-2xl flex-col overflow-hidden bg-paper shadow-2xl md:max-h-[90vh] md:rounded-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-line p-4 md:border-0 md:px-6 md:py-5">
+          <h3 className="text-lg font-semibold text-ink">{editId ? "编辑" : "新建"} Prompt</h3>
+          <button onClick={onClose} className="rounded p-1 hover:bg-soft" aria-label="关闭">
+            <X size={18} className="text-hint hover:text-ink" />
           </button>
         </div>
-
+        <div className="flex-1 overflow-y-auto p-4 md:px-6 md:pt-2">
         <div className="space-y-3 text-sm">
           <Field label="标题 *">
-            <input
-              value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-              placeholder="动词 + 任务对象，如「生成会议纪要」"
-              className="input"
-            />
+            <div className="flex gap-2">
+              <input
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="动词 + 任务对象，如「生成会议纪要」"
+                className="input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleAINaming}
+                disabled={naming}
+                title="根据正文调用 AI 生成标题与摘要"
+                className="inline-flex items-center gap-1 rounded border border-accent/40 bg-accent/[0.06] px-2.5 text-xs font-medium text-accent hover:bg-accent/[0.12] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Sparkles size={12} />
+                {naming ? "生成中…" : "AI 起名"}
+              </button>
+            </div>
           </Field>
 
           <Field label="正文 *（复制时只复制此内容）">
@@ -98,6 +136,15 @@ export function PromptEditor({ open, editId, onClose }: Props) {
               value={form.summary ?? ""}
               onChange={(e) => set("summary", e.target.value)}
               placeholder="一句话描述用途"
+              className="input"
+            />
+          </Field>
+
+          <Field label="任务意图">
+            <input
+              value={form.taskIntent ?? ""}
+              onChange={(e) => set("taskIntent", e.target.value)}
+              placeholder="该 Prompt 解决的真实问题（一句话）"
               className="input"
             />
           </Field>
@@ -167,15 +214,47 @@ export function PromptEditor({ open, editId, onClose }: Props) {
               className="input resize-none"
             />
           </Field>
+
+          {allContexts.length > 0 && (
+            <Field label="绑定上下文（调用此 Prompt 时自动勾选）">
+              <div className="max-h-32 overflow-y-auto space-y-0.5 rounded border border-border/60 p-1">
+                {allContexts.map((c) => {
+                  const ids = form.boundContextIds ?? [];
+                  const checked = ids.includes(c.id);
+                  return (
+                    <label
+                      key={c.id}
+                      className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked
+                            ? ids.filter((x) => x !== c.id)
+                            : [...ids, c.id];
+                          set("boundContextIds", next);
+                        }}
+                      />
+                      <span className="text-xs">
+                        {c.title} <span className="text-foreground/40">· {c.type}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
+        </div>
         </div>
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded px-4 py-1.5 text-sm text-foreground/60 hover:bg-muted">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-line bg-paper p-4 md:px-6 md:py-4">
+          <button onClick={onClose} className="rounded px-4 py-1.5 text-sm text-sub hover:bg-soft">
             取消
           </button>
           <button
             onClick={submit}
-            className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
+            className="rounded bg-moss px-4 py-1.5 text-sm font-medium text-paper hover:bg-moss/90"
           >
             保存
           </button>
@@ -188,7 +267,7 @@ export function PromptEditor({ open, editId, onClose }: Props) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-1 text-xs text-foreground/50">{label}</div>
+      <div className="mb-1 text-xs text-hint">{label}</div>
       {children}
     </label>
   );

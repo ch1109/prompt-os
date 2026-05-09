@@ -3,9 +3,9 @@ import { ScenarioTree } from "./ScenarioTree";
 
 const QUICK_ITEMS = [
   { id: "qs:all", label: "全部 Prompt" },
-  { id: "qs:fav", label: "⭐ 收藏" },
-  { id: "qs:recent", label: "🕐 最近使用" },
-  { id: "qs:pending", label: "⏳ 待确认" },
+  { id: "qs:fav", label: "收藏" },
+  { id: "qs:recent", label: "最近使用" },
+  { id: "qs:pending", label: "待确认" },
 ];
 
 const SMART_ITEMS = [
@@ -18,32 +18,30 @@ export function Sidebar() {
   const { selectedScenarioId, setSelectedScenario } = useUI();
 
   return (
-    <div className="space-y-1 p-2">
+    <div className="space-y-5 px-3 py-4">
       <Section
-        title="快捷入口"
+        title="快捷"
         items={QUICK_ITEMS}
         active={selectedScenarioId}
         onSelect={setSelectedScenario}
       />
-      <div className="pt-2">
+      <div>
         <SectionTitle>场景库</SectionTitle>
         <ScenarioTree />
       </div>
-      <div className="pt-2">
-        <Section
-          title="智能集合"
-          items={SMART_ITEMS}
-          active={selectedScenarioId}
-          onSelect={setSelectedScenario}
-        />
-      </div>
+      <Section
+        title="智能集合"
+        items={SMART_ITEMS}
+        active={selectedScenarioId}
+        onSelect={setSelectedScenario}
+      />
     </div>
   );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-2 pb-1 text-xs font-medium uppercase tracking-wider text-foreground/40">
+    <div className="mono mb-2 px-2 text-[10.5px] font-medium uppercase tracking-wider2 text-hint">
       {children}
     </div>
   );
@@ -63,21 +61,24 @@ function Section({
   return (
     <div>
       <SectionTitle>{title}</SectionTitle>
-      <ul>
-        {items.map((it) => (
-          <li key={it.id}>
-            <button
-              onClick={() => onSelect(it.id)}
-              className={`w-full rounded px-2 py-1 text-left text-sm transition-colors ${
-                active === it.id
-                  ? "bg-muted font-medium text-foreground"
-                  : "text-foreground/70 hover:bg-muted/60 hover:text-foreground"
-              }`}
-            >
-              {it.label}
-            </button>
-          </li>
-        ))}
+      <ul className="space-y-px">
+        {items.map((it) => {
+          const isActive = active === it.id;
+          return (
+            <li key={it.id}>
+              <button
+                onClick={() => onSelect(it.id)}
+                className={`group flex w-full items-center rounded px-2 py-[5px] text-left text-[13px] transition-colors ${
+                  isActive
+                    ? "bg-soft font-medium text-ink"
+                    : "text-sub hover:bg-soft/70 hover:text-ink"
+                }`}
+              >
+                {it.label}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

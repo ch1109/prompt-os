@@ -32,6 +32,7 @@ export async function createPrompt(
     updatedAt: now(),
     classificationConfidence: input.classificationConfidence,
     pendingReview: input.pendingReview ?? false,
+    boundContextIds: input.boundContextIds ?? [],
   };
   await db.prompts.add(p);
   return p;

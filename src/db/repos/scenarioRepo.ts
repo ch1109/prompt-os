@@ -10,8 +10,13 @@ export async function createScenario(
     title: input.title,
     parentId: input.parentId ?? null,
     level: input.level ?? 1,
+    fullPath: input.fullPath ?? [input.title],
     description: input.description ?? "",
     tags: input.tags ?? [],
+    recommendedPrompts: input.recommendedPrompts ?? [],
+    recommendedWorkflows: input.recommendedWorkflows ?? [],
+    recommendedContexts: input.recommendedContexts ?? [],
+    typicalTasks: input.typicalTasks ?? [],
   };
   await db.scenarios.add(s);
   return s;

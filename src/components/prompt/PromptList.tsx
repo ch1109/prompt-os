@@ -1,27 +1,74 @@
 import { usePrompts } from "@/hooks/usePrompts";
+import { useUI } from "@/store/uiStore";
 import { PromptCard } from "./PromptCard";
 
 export function PromptList({ onNew }: { onNew: () => void }) {
   const items = usePrompts();
+  const { searchQuery, selectedScenarioId, filterTaskTypes, filterDifficulties } = useUI();
 
   if (!items.length) {
+    const isSearch = searchQuery.trim().length > 0;
+    const isFilter =
+      !!selectedScenarioId || filterTaskTypes.length > 0 || filterDifficulties.length > 0;
+    const isFav = selectedScenarioId === "qs:fav";
+    const isPending = selectedScenarioId === "qs:pending";
+
+    const { glyph, title, hint, showCta } = (() => {
+      if (isSearch)
+        return {
+          glyph: "无",
+          title: `没有匹配「${searchQuery.trim().slice(0, 20)}」的 Prompt`,
+          hint: "换个关键词，或切换 AI 模式按意图搜索",
+          showCta: false,
+        };
+      if (isFav)
+        return {
+          glyph: "★",
+          title: "还没有收藏任何 Prompt",
+          hint: "在卡片或详情面板点击右上角的星标即可加入收藏",
+          showCta: false,
+        };
+      if (isPending)
+        return {
+          glyph: "✓",
+          title: "暂无待确认的 Prompt",
+          hint: "批量导入时低置信度的条目会出现在这里",
+          showCta: false,
+        };
+      if (isFilter)
+        return {
+          glyph: "空",
+          title: "当前筛选下没有 Prompt",
+          hint: "尝试清除筛选条件，或切换到其他场景",
+          showCta: false,
+        };
+      return {
+        glyph: "空",
+        title: "这里还没有 Prompt",
+        hint: "点击下方按钮新建第一条，或导入已有内容",
+        showCta: true,
+      };
+    })();
+
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <div className="text-4xl">✨</div>
-        <div className="font-semibold text-foreground">还没有 Prompt</div>
-        <div className="text-sm text-foreground/50">点击下方按钮新建第一条，或导入已有内容</div>
-        <button
-          onClick={onNew}
-          className="mt-1 rounded bg-accent px-4 py-1.5 text-sm text-white hover:bg-accent/90"
-        >
-          新建 Prompt
-        </button>
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+        <div className="serif text-3xl text-ink/30">{glyph}</div>
+        <div className="text-[15px] font-medium text-ink">{title}</div>
+        <div className="max-w-[320px] text-[13px] text-sub">{hint}</div>
+        {showCta && (
+          <button
+            onClick={onNew}
+            className="mt-2 rounded bg-moss px-4 py-1.5 text-[13px] font-medium text-paper transition hover:bg-moss/90"
+          >
+            新建 Prompt
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 p-3 md:p-5 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((p) => (
         <PromptCard key={p.id} p={p} />
       ))}
