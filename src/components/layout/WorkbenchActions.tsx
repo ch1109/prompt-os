@@ -75,26 +75,26 @@ export function WorkbenchActions() {
   }
 
   return (
-    <div className="hidden items-center gap-1.5 md:flex">
+    <div className="hidden items-center gap-2 md:flex">
       <button
         onClick={handleNewPack}
-        className="inline-flex items-center gap-1 rounded border border-line bg-paper px-2.5 py-1 text-[12px] font-medium text-sub transition hover:bg-soft hover:text-ink"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] font-medium text-sub transition hover:bg-soft hover:text-ink"
       >
-        <Plus size={12} strokeWidth={1.8} /> 新增子场景
+        <Plus size={14} strokeWidth={1.8} /> 新增子场景
       </button>
       <button
         onClick={handleNewStage}
         disabled={!canStageOrPrompt}
-        className="inline-flex items-center gap-1 rounded border border-line bg-paper px-2.5 py-1 text-[12px] font-medium text-sub transition hover:bg-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-paper disabled:hover:text-sub"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] font-medium text-sub transition hover:bg-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-paper disabled:hover:text-sub"
       >
-        <Plus size={12} strokeWidth={1.8} /> 新增阶段
+        <Plus size={14} strokeWidth={1.8} /> 新增阶段
       </button>
       <button
         onClick={handleNewPrompt}
         disabled={!canStageOrPrompt}
-        className="inline-flex items-center gap-1 rounded bg-moss px-2.5 py-1 text-[12px] font-medium text-paper transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-moss"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-moss px-3.5 py-1.5 text-[13px] font-semibold text-paper shadow-[0_10px_22px_-16px_rgb(var(--moss)/0.85)] transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-moss"
       >
-        <Plus size={12} strokeWidth={1.8} /> 新增 Prompt
+        <Plus size={14} strokeWidth={1.8} /> 新增 Prompt
       </button>
     </div>
   );

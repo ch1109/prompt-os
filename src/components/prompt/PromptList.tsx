@@ -51,24 +51,26 @@ export function PromptList({ onNew }: { onNew: () => void }) {
     })();
 
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-        <div className="serif text-3xl text-ink/30">{glyph}</div>
-        <div className="text-[15px] font-medium text-ink">{title}</div>
-        <div className="max-w-[320px] text-[13px] text-sub">{hint}</div>
-        {showCta && (
-          <button
-            onClick={onNew}
-            className="mt-2 rounded bg-moss px-4 py-1.5 text-[13px] font-medium text-paper transition hover:bg-moss/90"
-          >
-            新建 Prompt
-          </button>
-        )}
+      <div className="flex min-h-[44vh] flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="rounded-2xl border border-line/75 bg-paper/75 px-9 py-8 shadow-[0_18px_44px_-36px_rgb(var(--ink)/0.65)]">
+          <div className="mono mb-3 text-[34px] leading-none text-ink/25">{glyph}</div>
+          <div className="text-[17px] font-semibold tracking-tight text-ink">{title}</div>
+          <div className="mx-auto mt-2 max-w-[360px] text-[14.5px] leading-relaxed text-sub">{hint}</div>
+          {showCta && (
+            <button
+              onClick={onNew}
+              className="mt-5 rounded-full bg-moss px-[18px] py-2 text-sm font-semibold text-paper shadow-[0_12px_24px_-18px_rgb(var(--moss)/0.9)] transition hover:bg-moss/90"
+            >
+              新建 Prompt
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 p-3 md:p-5 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="prompt-grid grid items-start gap-[18px] p-4 md:p-5">
       {items.map((p) => (
         <PromptCard key={p.id} p={p} />
       ))}

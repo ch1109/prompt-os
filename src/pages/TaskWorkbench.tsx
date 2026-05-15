@@ -19,8 +19,9 @@ export default function TaskWorkbench() {
     <ThreeColumnLayout
       sidebar={<WorkbenchSidebar />}
       main={<TaskPackWorkspace />}
-      detail={selectedPromptId ? <PromptRunner /> : undefined}
-      detailWidthClass="md:w-[460px] lg:w-[600px]"
+      detail={selectedPromptId ? <PromptRunner onClose={() => setSelectedPrompt(null)} /> : undefined}
+      detailWidthClass="md:w-[340px] lg:w-[500px] xl:w-[600px]"
+      onDetailClose={() => setSelectedPrompt(null)}
     />
   );
 }

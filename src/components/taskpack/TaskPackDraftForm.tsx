@@ -100,31 +100,31 @@ export function TaskPackDraftForm() {
 
   return (
     <div
-      className="page-enter mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-10"
+      className="page-enter mx-auto max-w-3xl px-4 py-8 md:px-8 md:py-10"
       onKeyDown={onKeyDown}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className="mono rounded bg-amber-soft px-1.5 py-0.5 text-[10.5px] uppercase tracking-wider2 text-amber">
+        <span className="mono rounded-full bg-amber-soft px-2 py-1 text-xs uppercase tracking-wider2 text-amber">
           草稿
         </span>
-        <span className="text-[12px] text-hint">尚未保存</span>
+        <span className="text-[13px] text-hint">尚未保存</span>
         <button
           onClick={cancelDraftTaskPack}
           title="放弃草稿"
-          className="ml-auto rounded p-1 text-hint hover:bg-soft hover:text-red-500"
+          className="ml-auto rounded-md p-1.5 text-hint hover:bg-soft hover:text-red-500"
         >
-          <X size={14} strokeWidth={1.6} />
+          <X size={16} strokeWidth={1.6} />
         </button>
       </div>
 
-      <h1 className="serif mb-1 text-[26px] font-semibold leading-snug tracking-tight text-ink">
+      <h1 className="serif mb-2 text-[32px] font-semibold leading-snug tracking-tight text-ink">
         新建子场景
       </h1>
-      <p className="mb-8 text-[13px] leading-relaxed text-sub">
+      <p className="mb-8 text-[15px] leading-relaxed text-sub">
         起个名字、选一个场景就可以创建。目标和阶段都可以稍后再补。
       </p>
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         <Field
           label="子场景名称"
           required
@@ -160,7 +160,7 @@ export function TaskPackDraftForm() {
           }
         >
           {firstLevel.length === 0 ? (
-            <div className="rounded border border-dashed border-line bg-canvas px-3 py-3 text-[12.5px] text-hint">
+            <div className="rounded-lg border border-dashed border-line bg-canvas px-4 py-3.5 text-[13.5px] text-hint">
               还没有场景大类，去左栏底部点击「+ 新增场景大类」创建
             </div>
           ) : (
@@ -183,22 +183,22 @@ export function TaskPackDraftForm() {
         </Field>
       </div>
 
-      <div className="mt-8 flex items-center gap-3">
+      <div className="mt-9 flex items-center gap-3">
         <button
           onClick={submit}
           disabled={!canSubmit || submitting}
-          className="inline-flex items-center gap-1.5 rounded bg-moss px-4 py-2 text-[13px] font-medium text-paper transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-moss px-4 py-2.5 text-[14px] font-semibold text-paper transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitting ? "创建中…" : "创建并开始"}
-          <ArrowRight size={13} strokeWidth={2} />
+          <ArrowRight size={15} strokeWidth={2} />
         </button>
         <button
           onClick={cancelDraftTaskPack}
-          className="rounded px-3 py-2 text-[13px] text-sub hover:bg-soft hover:text-ink"
+          className="rounded-lg px-3.5 py-2.5 text-[14px] text-sub hover:bg-soft hover:text-ink"
         >
           取消
         </button>
-        <span className="ml-auto text-[11px] text-hint">
+        <span className="ml-auto text-xs text-hint">
           <kbd className="mono rounded border border-line bg-canvas px-1">⌘↵</kbd> 提交 ·
           <kbd className="mono ml-1 rounded border border-line bg-canvas px-1">esc</kbd>{" "}
           取消
@@ -223,15 +223,15 @@ function Field({
 }) {
   return (
     <label className="block">
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="text-[12.5px] font-medium text-ink">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[13.5px] font-medium text-ink">
           {label}
           {required && <span className="ml-0.5 text-red-500">*</span>}
         </span>
         {error ? (
-          <span className="text-[11px] text-red-500">{error}</span>
+          <span className="text-xs text-red-500">{error}</span>
         ) : hint ? (
-          <span className="text-[11px] text-hint">{hint}</span>
+          <span className="text-xs text-hint">{hint}</span>
         ) : null}
       </div>
       {children}

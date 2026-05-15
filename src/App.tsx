@@ -21,7 +21,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col bg-canvas">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-canvas/85 px-3 backdrop-blur-sm md:gap-6 md:px-5">
+      <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-canvas/85 px-3.5 backdrop-blur-sm md:gap-7 md:px-6">
         <button
           onClick={() => setMobileNavOpen(true)}
           className="rounded p-1.5 text-sub hover:bg-soft md:hidden"
@@ -30,21 +30,21 @@ export default function App() {
           <Menu size={16} strokeWidth={1.7} />
         </button>
         <div className="flex shrink-0 flex-col leading-tight">
-          <span className="mono select-none whitespace-nowrap text-[15px] font-semibold tracking-tight text-ink">
+          <span className="mono select-none whitespace-nowrap text-[16px] font-semibold tracking-tight text-ink">
             Prompt<span className="text-moss">·</span>OS
           </span>
-          <span className="hidden whitespace-nowrap text-[10.5px] text-hint md:block">
+          <span className="hidden whitespace-nowrap text-xs text-hint md:block">
             场景驱动的提示词工作台
           </span>
         </div>
-        <nav className="hidden flex-1 items-center gap-px whitespace-nowrap text-[13px] md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center gap-1 whitespace-nowrap text-[14px] md:flex">
           {NAV.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               end={n.to === "/"}
               className={({ isActive }) =>
-                `relative whitespace-nowrap px-3 py-1 transition-colors ${
+                `relative whitespace-nowrap px-3.5 py-1.5 transition-colors ${
                   isActive ? "font-medium text-ink" : "text-sub hover:text-ink"
                 }`
               }
@@ -53,7 +53,7 @@ export default function App() {
                 <>
                   {n.label}
                   {isActive && (
-                    <span className="absolute inset-x-3 -bottom-[17px] h-px bg-ink" />
+                    <span className="absolute inset-x-3 -bottom-[18px] h-px bg-ink" />
                   )}
                 </>
               )}

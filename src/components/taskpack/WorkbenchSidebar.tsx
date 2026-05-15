@@ -4,10 +4,20 @@ import { Check, ChevronRight, Clock, Plus, Search, Star, X } from "lucide-react"
 import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { useScenarios } from "@/hooks/useScenarios";
-import { createScenario } from "@/db/repos/scenarioRepo";
+import {
+  createScenario,
+  renameScenario,
+  reorderSiblings,
+} from "@/db/repos/scenarioRepo";
 import { toast } from "@/store/toastStore";
 import type { Scenario, TaskPack } from "@/types";
 import { ContextSection } from "./ContextSection";
+import {
+  DropIndicator,
+  InlineEdit,
+  NodeMenuButton,
+  type DropEdge,
+} from "@/components/sidebar/scenarioControls";
 
 type FilterMode = "all" | "favorites" | "recent";
 
@@ -29,9 +39,65 @@ export function WorkbenchSidebar() {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
 
   const firstLevel = useMemo(
-    () => allScenarios.filter((s) => s.level === 1),
+    () =>
+      [...allScenarios.filter((s) => s.level === 1)].sort((a, b) => {
+        const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+        const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+        if (ao !== bo) return ao - bo;
+        return a.title.localeCompare(b.title, "zh");
+      }),
     [allScenarios]
   );
+
+  // 编辑/菜单/拖拽态局部管理(只针对一级场景)
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; edge: DropEdge } | null>(null);
+
+  async function handleSceneRename(id: string, nextTitle: string) {
+    const scn = firstLevel.find((s) => s.id === id);
+    if (!scn) return setEditingId(null);
+    if (!nextTitle.trim() || nextTitle.trim() === scn.title) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      const { touchedPrompts } = await renameScenario(id, nextTitle);
+      toast.success(
+        touchedPrompts > 0
+          ? `已重命名,并联动更新 ${touchedPrompts} 条 Prompt`
+          : "已重命名"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "重命名失败");
+    }
+    setEditingId(null);
+  }
+
+  async function handleSceneDrop(targetId: string, edge: DropEdge) {
+    setDropTarget(null);
+    if (!draggingId || draggingId === targetId) return;
+    const source = firstLevel.find((s) => s.id === draggingId);
+    const target = firstLevel.find((s) => s.id === targetId);
+    setDraggingId(null);
+    if (!source || !target) return;
+    const without = firstLevel.filter((s) => s.id !== source.id);
+    const targetIdx = without.findIndex((s) => s.id === target.id);
+    if (targetIdx === -1) return;
+    const insertAt = edge === "before" ? targetIdx : targetIdx + 1;
+    const reordered = [...without.slice(0, insertAt), source, ...without.slice(insertAt)];
+    await reorderSiblings(reordered.map((s) => s.id));
+  }
+
+  async function handleSceneMove(id: string, delta: -1 | 1) {
+    const idx = firstLevel.findIndex((s) => s.id === id);
+    const target = idx + delta;
+    if (idx === -1 || target < 0 || target >= firstLevel.length) return;
+    const reordered = [...firstLevel];
+    [reordered[idx], reordered[target]] = [reordered[target], reordered[idx]];
+    await reorderSiblings(reordered.map((s) => s.id));
+  }
 
   // 选中子场景后自动展开其父场景
   useEffect(() => {
@@ -101,17 +167,17 @@ export function WorkbenchSidebar() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="space-y-2 border-b border-line px-3 py-3">
-        <div className="flex items-center gap-2 rounded border border-line bg-paper px-2.5 py-1.5">
-          <Search size={13} strokeWidth={1.7} className="shrink-0 text-hint" />
+      <div className="space-y-2.5 border-b border-line px-3 py-3.5">
+        <div className="flex items-center gap-2.5 rounded-lg border border-line bg-paper px-3 py-2">
+          <Search size={15} strokeWidth={1.7} className="shrink-0 text-hint" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索场景、子场景、Prompt"
-            className="flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-hint"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-hint"
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           <FilterChip
             active={filterMode === "all"}
             onClick={() => setFilterMode("all")}
@@ -120,25 +186,25 @@ export function WorkbenchSidebar() {
           <FilterChip
             active={filterMode === "favorites"}
             onClick={() => setFilterMode("favorites")}
-            icon={<Star size={10} strokeWidth={2} />}
+            icon={<Star size={12} strokeWidth={2} />}
             label="收藏"
           />
           <FilterChip
             active={filterMode === "recent"}
             onClick={() => setFilterMode("recent")}
-            icon={<Clock size={10} strokeWidth={1.8} />}
+            icon={<Clock size={12} strokeWidth={1.8} />}
             label="最近"
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-1.5 py-2">
+      <div className="flex-1 overflow-y-auto px-2 py-2.5">
         {firstLevel.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-hint">
+          <div className="px-3 py-6 text-center text-[13.5px] text-hint">
             暂无场景，去下方「+ 新增场景大类」创建第一个
           </div>
         ) : (
-          <ul className="space-y-px">
+          <ul className="space-y-1">
             {firstLevel.map((scene) => {
               const all = packsByScene.get(scene.id) ?? [];
               const visible = noActiveFilter
@@ -155,16 +221,49 @@ export function WorkbenchSidebar() {
                     scene={scene}
                     expanded={expanded}
                     total={total}
+                    siblingCount={firstLevel.length}
+                    siblingIndex={firstLevel.findIndex((s) => s.id === scene.id)}
+                    isEditing={editingId === scene.id}
+                    isMenuOpen={menuId === scene.id}
+                    isDragging={draggingId === scene.id}
+                    dropEdge={dropTarget?.id === scene.id ? dropTarget.edge : null}
                     onToggle={() => toggleSceneCategoryExpanded(scene.id)}
                     onAdd={() => beginCreateTaskPack(scene.id)}
+                    onStartEdit={() => setEditingId(scene.id)}
+                    onCommitEdit={(v) => handleSceneRename(scene.id, v)}
+                    onCancelEdit={() => setEditingId(null)}
+                    onToggleMenu={() =>
+                      setMenuId((cur) => (cur === scene.id ? null : scene.id))
+                    }
+                    onCloseMenu={() => setMenuId(null)}
+                    onMoveUp={() => handleSceneMove(scene.id, -1)}
+                    onMoveDown={() => handleSceneMove(scene.id, 1)}
+                    onDragStart={() => setDraggingId(scene.id)}
+                    onDragEnd={() => {
+                      setDraggingId(null);
+                      setDropTarget(null);
+                    }}
+                    onDragOverEdge={(edge) => {
+                      if (!draggingId || draggingId === scene.id) return;
+                      if (
+                        dropTarget?.id !== scene.id ||
+                        dropTarget.edge !== edge
+                      ) {
+                        setDropTarget({ id: scene.id, edge });
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dropTarget?.id === scene.id) setDropTarget(null);
+                    }}
+                    onDrop={(edge) => handleSceneDrop(scene.id, edge)}
                   />
                   {expanded && (
-                    <ul className="mb-1.5 space-y-px pl-7 pr-1">
+                    <ul className="mb-2 space-y-1 pl-8 pr-1">
                       {visible.length === 0 ? (
                         <li>
                           <button
                             onClick={() => beginCreateTaskPack(scene.id)}
-                            className="w-full rounded px-2 py-1 text-left text-[12px] italic text-hint transition hover:bg-soft hover:text-moss"
+                            className="w-full rounded-md px-2.5 py-1.5 text-left text-[13px] italic text-hint transition hover:bg-soft hover:text-moss"
                           >
                             该场景下还没有子场景，点击新建
                           </button>
@@ -190,7 +289,7 @@ export function WorkbenchSidebar() {
 
       <ContextSection />
 
-      <div className="border-t border-line p-2.5">
+      <div className="border-t border-line p-3">
         <NewSceneRow
           onCreated={(scene) => {
             setSceneCategoryExpanded(scene.id, true);
@@ -217,7 +316,7 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
         active
           ? "bg-moss text-paper"
           : "bg-soft text-sub hover:bg-soft/80 hover:text-ink"
@@ -233,48 +332,163 @@ function SceneRow({
   scene,
   expanded,
   total,
+  siblingCount,
+  siblingIndex,
+  isEditing,
+  isMenuOpen,
+  isDragging,
+  dropEdge,
   onToggle,
   onAdd,
+  onStartEdit,
+  onCommitEdit,
+  onCancelEdit,
+  onToggleMenu,
+  onCloseMenu,
+  onMoveUp,
+  onMoveDown,
+  onDragStart,
+  onDragEnd,
+  onDragOverEdge,
+  onDragLeave,
+  onDrop,
 }: {
   scene: Scenario;
   expanded: boolean;
   total: number;
+  siblingCount: number;
+  siblingIndex: number;
+  isEditing: boolean;
+  isMenuOpen: boolean;
+  isDragging: boolean;
+  dropEdge: DropEdge | null;
   onToggle: () => void;
   onAdd: () => void;
+  onStartEdit: () => void;
+  onCommitEdit: (v: string) => void;
+  onCancelEdit: () => void;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOverEdge: (edge: DropEdge) => void;
+  onDragLeave: () => void;
+  onDrop: (edge: DropEdge) => void;
 }) {
   return (
-    <div className="group flex items-center rounded text-[13px] text-sub hover:bg-soft/60 hover:text-ink">
-      <button
-        onClick={onToggle}
-        className="flex flex-1 items-center gap-1 px-1.5 py-[6px] text-left"
-      >
-        <ChevronRight
-          size={12}
-          strokeWidth={2}
-          className={`shrink-0 text-hint transition-transform ${
-            expanded ? "rotate-90" : ""
-          }`}
-        />
-        <span className="flex-1 truncate text-[13.5px] font-semibold tracking-tight">
-          {scene.title}
-        </span>
-        {total > 0 && (
-          <span className="mr-1 text-[11px] tabular-nums text-hint">
-            {total}
+    <div
+      className={`group relative flex items-center rounded-lg text-[14px] text-sub hover:bg-soft/60 hover:text-ink ${
+        isDragging ? "opacity-40" : ""
+      }`}
+      draggable={!isEditing}
+      onDragStart={(e) => {
+        onDragStart();
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", scene.id);
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = e.currentTarget.getBoundingClientRect();
+        const edge: DropEdge = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+        onDragOverEdge(edge);
+      }}
+      onDragLeave={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) onDragLeave();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (dropEdge) onDrop(dropEdge);
+      }}
+      onContextMenu={(e) => {
+        if (isEditing) return;
+        e.preventDefault();
+        onToggleMenu();
+      }}
+    >
+      {dropEdge === "before" && <DropIndicator position="top" insetLeft={4} />}
+      {dropEdge === "after" && <DropIndicator position="bottom" insetLeft={4} />}
+
+      {isEditing ? (
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">
+          <ChevronRight
+            size={14}
+            strokeWidth={2}
+            className={`shrink-0 text-hint transition-transform ${
+              expanded ? "rotate-90" : ""
+            }`}
+          />
+          <InlineEdit
+            defaultValue={scene.title}
+            onCommit={onCommitEdit}
+            onCancel={onCancelEdit}
+            className="min-w-0 flex-1"
+          />
+        </div>
+      ) : (
+        <button
+          onClick={onToggle}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onStartEdit();
+          }}
+          className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 text-left"
+        >
+          <ChevronRight
+            size={14}
+            strokeWidth={2}
+            className={`shrink-0 text-hint transition-transform ${
+              expanded ? "rotate-90" : ""
+            }`}
+          />
+          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-tight">
+            {scene.title}
           </span>
-        )}
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onAdd();
-        }}
-        title={`在「${scene.title}」下新建子场景`}
-        aria-label={`在「${scene.title}」下新建子场景`}
-        className="mr-1 rounded p-1 text-hint/70 transition hover:bg-paper hover:text-moss"
-      >
-        <Plus size={12} strokeWidth={1.8} />
-      </button>
+          {total > 0 && (
+            <span className="mr-1 text-xs tabular-nums text-hint">
+              {total}
+            </span>
+          )}
+        </button>
+      )}
+
+      {!isEditing && (
+        <>
+          <NodeMenuButton
+            isOpen={isMenuOpen}
+            onToggle={onToggleMenu}
+            onClose={onCloseMenu}
+            items={[
+              { label: "重命名", onClick: () => { onCloseMenu(); onStartEdit(); } },
+              {
+                label: "上移",
+                disabled: siblingIndex <= 0,
+                onClick: () => { onCloseMenu(); onMoveUp(); },
+              },
+              {
+                label: "下移",
+                disabled: siblingIndex < 0 || siblingIndex >= siblingCount - 1,
+                onClick: () => { onCloseMenu(); onMoveDown(); },
+              },
+            ]}
+          />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+            title={`在「${scene.title}」下新建子场景`}
+            aria-label={`在「${scene.title}」下新建子场景`}
+            className="mr-1 rounded-md p-1.5 text-hint/70 transition hover:bg-paper hover:text-moss"
+          >
+            <Plus size={14} strokeWidth={1.8} />
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -292,7 +506,7 @@ function PackRow({
     <li>
       <button
         onClick={onSelect}
-        className={`group relative flex w-full items-center gap-1.5 rounded px-2 py-[5px] text-left text-[13px] transition-colors ${
+        className={`group relative flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13.5px] transition-colors ${
           active
             ? "bg-soft font-medium text-ink"
             : "text-sub hover:bg-soft/60 hover:text-ink"
@@ -302,13 +516,13 @@ function PackRow({
           <span className="absolute inset-y-1 left-0 w-[2px] rounded-full bg-moss" />
         )}
         <span className="text-hint">·</span>
-        <span className="flex-1 truncate">
+        <span className="min-w-0 flex-1 truncate">
           {pack.title || (
             <span className="italic text-hint">未命名子场景</span>
           )}
         </span>
         {pack.isFavorited && (
-          <Star size={10} strokeWidth={2} className="shrink-0 fill-amber text-amber" />
+          <Star size={12} strokeWidth={2} className="shrink-0 fill-amber text-amber" />
         )}
       </button>
     </li>
@@ -355,15 +569,15 @@ function NewSceneRow({ onCreated }: { onCreated: (scene: Scenario) => void }) {
     return (
       <button
         onClick={() => setEditing(true)}
-        className="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-line py-2 text-[12.5px] font-medium text-moss/80 transition hover:border-moss/60 hover:bg-soft hover:text-moss"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2.5 text-[13.5px] font-medium text-moss/80 transition hover:border-moss/60 hover:bg-soft hover:text-moss"
       >
-        <Plus size={12} strokeWidth={1.8} /> 新增场景大类
+        <Plus size={14} strokeWidth={1.8} /> 新增场景大类
       </button>
     );
   }
 
   return (
-    <div className="flex items-center gap-1 rounded border border-dashed border-moss/60 bg-paper px-2 py-1">
+    <div className="flex items-center gap-1.5 rounded-lg border border-dashed border-moss/60 bg-paper px-2.5 py-1.5">
       <input
         ref={inputRef}
         value={draft}
@@ -373,21 +587,21 @@ function NewSceneRow({ onCreated }: { onCreated: (scene: Scenario) => void }) {
           else if (e.key === "Escape") cancel();
         }}
         placeholder="场景大类名称"
-        className="flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-hint"
+        className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-hint"
       />
       <button
         onClick={commit}
-        className="rounded p-1 text-moss hover:bg-moss-soft"
+        className="rounded-md p-1.5 text-moss hover:bg-moss-soft"
         title="确认 (Enter)"
       >
-        <Check size={12} strokeWidth={2} />
+        <Check size={14} strokeWidth={2} />
       </button>
       <button
         onClick={cancel}
-        className="rounded p-1 text-hint hover:bg-soft hover:text-ink"
+        className="rounded-md p-1.5 text-hint hover:bg-soft hover:text-ink"
         title="取消 (Esc)"
       >
-        <X size={12} strokeWidth={1.8} />
+        <X size={14} strokeWidth={1.8} />
       </button>
     </div>
   );

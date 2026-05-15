@@ -17,7 +17,7 @@ export async function seedPromptOSV31(): Promise<void> {
 
   const now = Date.now();
 
-  const scenarios: Scenario[] = SCENE_DEFS.map((s) => ({
+  const scenarios: Scenario[] = SCENE_DEFS.map((s, i) => ({
     id: s.id,
     title: s.title,
     parentId: null,
@@ -25,6 +25,7 @@ export async function seedPromptOSV31(): Promise<void> {
     fullPath: [s.title],
     description: s.description,
     tags: [],
+    order: i * 10,
     recommendedPrompts: [],
     recommendedWorkflows: [],
     recommendedContexts: [],

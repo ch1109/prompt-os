@@ -13,12 +13,21 @@ const SMART_ITEMS = [
   { id: "smart:strategic", label: "战略型" },
   { id: "smart:high-freq", label: "高频" },
 ];
+const NAV_ITEM_BASE =
+  "group flex w-full items-center rounded-lg px-3 py-2 text-left text-[14px] transition";
+const NAV_ITEM_ACTIVE =
+  "bg-paper font-semibold text-ink shadow-[inset_0_0_0_1px_rgb(var(--line)/0.65),0_8px_18px_-18px_rgb(var(--ink)/0.6)]";
+const NAV_ITEM_IDLE = "text-sub hover:bg-paper/70 hover:text-ink";
+
+function getNavItemClass(isActive: boolean): string {
+  return `${NAV_ITEM_BASE} ${isActive ? NAV_ITEM_ACTIVE : NAV_ITEM_IDLE}`;
+}
 
 export function Sidebar() {
   const { selectedScenarioId, setSelectedScenario } = useUI();
 
   return (
-    <div className="space-y-5 px-3 py-4">
+    <div className="space-y-[18px] px-3 py-4">
       <Section
         title="快捷"
         items={QUICK_ITEMS}
@@ -41,7 +50,7 @@ export function Sidebar() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mono mb-2 px-2 text-[10.5px] font-medium uppercase tracking-wider2 text-hint">
+    <div className="mono mb-2.5 px-2 text-xs font-semibold uppercase tracking-wider2 text-hint">
       {children}
     </div>
   );
@@ -61,18 +70,14 @@ function Section({
   return (
     <div>
       <SectionTitle>{title}</SectionTitle>
-      <ul className="space-y-px">
+      <ul className="space-y-1.5">
         {items.map((it) => {
           const isActive = active === it.id;
           return (
             <li key={it.id}>
               <button
                 onClick={() => onSelect(it.id)}
-                className={`group flex w-full items-center rounded px-2 py-[5px] text-left text-[13px] transition-colors ${
-                  isActive
-                    ? "bg-soft font-medium text-ink"
-                    : "text-sub hover:bg-soft/70 hover:text-ink"
-                }`}
+                className={getNavItemClass(isActive)}
               >
                 {it.label}
               </button>

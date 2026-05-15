@@ -12,10 +12,15 @@ import { IntentResultPanel } from "@/components/prompt/IntentResultPanel";
 import { useUI } from "@/store/uiStore";
 import { db } from "@/db";
 
+const HEADER_LINK_CLASS =
+  "inline-flex items-center gap-1.5 rounded-full border border-line/75 bg-paper/70 px-3 py-1.5 text-[13px] font-medium text-sub transition hover:border-line hover:bg-soft hover:text-ink";
+const HEADER_PRIMARY_BUTTON_CLASS =
+  "inline-flex items-center gap-1.5 rounded-full bg-moss px-3.5 py-1.5 text-[13px] font-semibold text-paper shadow-[0_10px_22px_-16px_rgb(var(--moss)/0.85)] transition hover:bg-moss/90";
+
 export default function Prompts() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const { selectedPromptId } = useUI();
+  const { selectedPromptId, setSelectedPrompt } = useUI();
   const location = useLocation();
   const navigate = useNavigate();
   const pendingCount =
@@ -29,8 +34,11 @@ export default function Prompts() {
   // 支持 Command Palette 通过 #new hash 跳转打开新建编辑器
   useEffect(() => {
     if (location.hash === "#new") {
-      openNew();
-      navigate("/prompts", { replace: true });
+      const timer = window.setTimeout(() => {
+        openNew();
+        navigate("/prompts", { replace: true });
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [location.hash, navigate]);
 
@@ -45,33 +53,35 @@ export default function Prompts() {
         sidebar={<Sidebar />}
         main={
           <div className="page-enter">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2 md:px-4">
-              <span className="text-sm font-medium text-sub">Prompt 库</span>
+            <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-line/75 bg-canvas/[0.55] px-3.5 py-3 backdrop-blur md:px-5">
+              <span className="mono text-xs font-semibold uppercase tracking-wider2 text-sub">
+                Prompt 库
+              </span>
               <div className="flex items-center gap-1.5">
                 <Link
                   to="/import"
                   title="批量导入"
-                  className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-xs text-sub hover:bg-soft hover:text-ink"
+                  className={HEADER_LINK_CLASS}
                 >
-                  <Upload size={12} /> <span className="hidden sm:inline">批量导入</span>
+                  <Upload size={14} /> <span className="hidden sm:inline">批量导入</span>
                 </Link>
                 <Link
                   to="/pending"
                   title="待确认"
-                  className="relative inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-xs text-sub hover:bg-soft hover:text-ink"
+                  className={`relative ${HEADER_LINK_CLASS}`}
                 >
-                  <Inbox size={12} /> <span className="hidden sm:inline">待确认</span>
+                  <Inbox size={14} /> <span className="hidden sm:inline">待确认</span>
                   {pendingCount > 0 && (
-                    <span className="ml-0.5 rounded-full bg-moss-soft px-1.5 text-[10px] font-medium tabular-nums text-moss">
+                    <span className="ml-0.5 rounded-full bg-moss-soft px-1.5 text-[11px] font-medium tabular-nums text-moss">
                       {pendingCount}
                     </span>
                   )}
                 </Link>
                 <button
                   onClick={openNew}
-                  className="inline-flex items-center gap-1 rounded bg-moss px-2.5 py-1 text-xs font-medium text-paper hover:bg-moss/90"
+                  className={HEADER_PRIMARY_BUTTON_CLASS}
                 >
-                  <Plus size={13} /> 新建
+                  <Plus size={15} /> 新建
                 </button>
               </div>
             </div>
@@ -87,6 +97,8 @@ export default function Prompts() {
             </div>
           ) : undefined
         }
+        detailWidthClass="md:w-[380px] lg:w-[460px] xl:w-[520px]"
+        onDetailClose={() => setSelectedPrompt(null)}
       />
       <PromptEditor
         open={editorOpen}

@@ -27,12 +27,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          '-apple-system',
-          'BlinkMacSystemFont',
+          '"Avenir Next"',
           '"PingFang SC"',
           '"Noto Sans SC"',
-          '"Helvetica Neue"',
-          'system-ui',
+          '"Microsoft YaHei UI"',
           'sans-serif',
         ],
         serif: [
@@ -59,10 +57,10 @@ export default {
         wider2: '0.08em',
       },
       borderRadius: {
-        DEFAULT: '0.25rem',  // 4px
-        sm: '0.1875rem',
-        md: '0.3125rem',
-        lg: '0.4375rem',
+        DEFAULT: '0.5rem',
+        sm: '0.375rem',
+        md: '0.625rem',
+        lg: '0.875rem',
       },
     },
   },

@@ -55,8 +55,10 @@ export function PromptRunner({
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
-    setValues({});
-    setCopied(null);
+    queueMicrotask(() => {
+      setValues({});
+      setCopied(null);
+    });
   }, [promptId]);
 
   const stageOfPrompt = useMemo(() => {
@@ -69,12 +71,12 @@ export function PromptRunner({
   if (!promptId) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
-        <div className="max-w-[260px]">
-          <div className="serif mb-3 text-3xl text-ink/30">·</div>
-          <p className="mb-1 text-[14px] font-medium text-ink">
+        <div className="max-w-[320px]">
+          <div className="serif mb-3 text-[40px] leading-none text-ink/30">·</div>
+          <p className="mb-2 text-[17px] font-semibold text-ink">
             选中一个 Prompt 开始执行
           </p>
-          <p className="text-[12.5px] leading-relaxed text-sub">
+          <p className="text-[14.5px] leading-relaxed text-sub">
             点击中间区域阶段下的 Prompt，<br />
             自动识别变量并生成可复制的完整 Prompt
           </p>
@@ -85,7 +87,7 @@ export function PromptRunner({
 
   if (!prompt) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-[13px] text-hint">
+      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-hint">
         Prompt 不存在或已被删除
       </div>
     );
@@ -93,9 +95,8 @@ export function PromptRunner({
 
   const filled = renderTemplate(prompt.body, values);
   const noVariables = variables.length === 0;
-  const allFilled =
-    !noVariables &&
-    variables.every((name) => (values[name] ?? "").trim().length > 0);
+  const filledCount = variables.filter((name) => (values[name] ?? "").trim()).length;
+  const hasUnfilledVariables = !noVariables && filledCount < variables.length;
 
   async function copyText(text: string, kind: "raw" | "filled") {
     if (!prompt) return;
@@ -115,15 +116,15 @@ export function PromptRunner({
         }`}
       >
         {/* 顶部 */}
-        <div className="flex items-start gap-2 border-b border-line px-5 py-4">
+        <div className="flex items-start gap-3 border-b border-line px-5 py-5">
           <div className="min-w-0 flex-1">
-            <p className="mb-0.5 text-[11px] uppercase tracking-wider2 text-hint">
+            <p className="mb-1 text-xs uppercase tracking-wider2 text-hint">
               当前 Prompt
             </p>
-            <h2 className="serif truncate text-[18px] font-semibold leading-tight text-ink">
+            <h2 className="serif truncate text-[22px] font-semibold leading-tight text-ink">
               {prompt.title}
             </h2>
-            <p className="mt-1 text-[12px] text-sub">
+            <p className="mt-2 text-[13.5px] text-sub">
               阶段：
               {stageOfPrompt
                 ? stageOfPrompt.stage.name || `阶段 ${stageOfPrompt.index + 1}`
@@ -133,33 +134,33 @@ export function PromptRunner({
           <button
             onClick={() => setEditorOpen(true)}
             title="编辑 Prompt"
-            className="rounded p-1.5 text-hint hover:bg-soft hover:text-moss"
+            className="rounded-md p-2 text-hint hover:bg-soft hover:text-moss"
           >
-            <Pencil size={14} strokeWidth={1.6} />
+            <Pencil size={17} strokeWidth={1.6} />
           </button>
           {onClose && (
             <button
               onClick={onClose}
               title="关闭"
-              className="rounded p-1.5 text-hint hover:bg-soft hover:text-ink"
+              className="rounded-md p-2 text-hint hover:bg-soft hover:text-ink"
             >
-              <X size={14} strokeWidth={1.6} />
+              <X size={17} strokeWidth={1.6} />
             </button>
           )}
         </div>
 
-        {/* 滚动区：无变量时仅 1 块，有变量时 3 块 */}
+        {/* 滚动区：无变量时仅 1 块，有变量时只展示原文和填空区 */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {noVariables ? (
             <Section
               title="Prompt"
               hint={prompt.body ? `${prompt.body.length} 字` : undefined}
             >
-              <div className="rounded-md border border-line bg-canvas px-3.5 py-2.5">
+              <div className="rounded-2xl border border-line bg-canvas px-4 py-3.5">
                 {prompt.body ? (
                   <MarkdownView text={prompt.body} />
                 ) : (
-                  <p className="text-[12.5px] italic text-hint">
+                  <p className="text-[14px] italic text-hint">
                     Prompt 内容为空，点击右上角铅笔图标编辑
                   </p>
                 )}
@@ -168,59 +169,47 @@ export function PromptRunner({
           ) : (
             <>
               <Section title="原始 Prompt" hint={`${prompt.body.length} 字`}>
-                <div className="rounded-md border border-line bg-canvas px-3.5 py-2.5">
+                <div className="rounded-2xl border border-line bg-canvas px-4 py-3.5">
                   <MarkdownView text={prompt.body} />
                 </div>
               </Section>
 
               <Section
                 title="变量填空区"
-                hint={`${
-                  variables.filter((n) => (values[n] ?? "").trim()).length
-                }/${variables.length}`}
+                hint={
+                  <>
+                    {filledCount}/{variables.length}
+                    {hasUnfilledVariables && (
+                      <span className="ml-2 text-amber">
+                        未填变量保留原样
+                      </span>
+                    )}
+                  </>
+                }
               >
                 <div className="space-y-3">
                   {variables.map((name) => {
-                    const v = values[name] ?? "";
-                    const long = isLongValue(v);
+                    const value = values[name] ?? "";
                     return (
                       <label key={name} className="block">
-                        <span className="mono mb-1 block text-[11.5px] font-medium text-sub">
+                        <span className="mono mb-1.5 block text-xs font-semibold text-sub">
                           {name}
                         </span>
                         <textarea
-                          value={v}
+                          value={value}
                           onChange={(e) =>
                             setValues((prev) => ({
                               ...prev,
                               [name]: e.target.value,
                             }))
                           }
-                          rows={long ? 4 : 2}
+                          rows={isLongValue(value) ? 4 : 2}
                           placeholder={`填写 ${name}`}
-                          className="input w-full resize-y text-[13px] leading-relaxed"
+                          className="input w-full resize-y text-[14.5px] leading-relaxed"
                         />
                       </label>
                     );
                   })}
-                </div>
-              </Section>
-
-              <Section
-                title="生成后的完整 Prompt"
-                hint={
-                  <>
-                    约 {filled.length} 字
-                    {!allFilled && (
-                      <span className="ml-2 text-amber">
-                        未填变量保留 {"{{ }}"}
-                      </span>
-                    )}
-                  </>
-                }
-              >
-                <div className="rounded-md border border-line bg-canvas px-3.5 py-2.5">
-                  <MarkdownView text={filled} />
                 </div>
               </Section>
             </>
@@ -228,16 +217,16 @@ export function PromptRunner({
         </div>
 
         {/* 底部复制按钮 */}
-        <div className="flex shrink-0 gap-2 border-t border-line bg-paper px-5 py-3">
+        <div className="flex shrink-0 gap-2.5 border-t border-line bg-paper px-5 py-4">
           {noVariables ? (
             <button
               onClick={() => copyText(prompt.body, "filled")}
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded bg-moss py-2 text-[12.5px] font-medium text-paper transition hover:bg-moss/90"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-moss py-2.5 text-[14px] font-semibold text-paper transition hover:bg-moss/90"
             >
               {copied === "filled" ? (
-                <Check size={13} strokeWidth={2} />
+                <Check size={15} strokeWidth={2} />
               ) : (
-                <Copy size={13} strokeWidth={1.7} />
+                <Copy size={15} strokeWidth={1.7} />
               )}
               复制 Prompt
             </button>
@@ -245,24 +234,23 @@ export function PromptRunner({
             <>
               <button
                 onClick={() => copyText(filled, "filled")}
-                disabled={!allFilled}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded bg-moss py-2 text-[12.5px] font-medium text-paper transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-moss py-2.5 text-[14px] font-semibold text-paper transition hover:bg-moss/90"
               >
                 {copied === "filled" ? (
-                  <Check size={13} strokeWidth={2} />
+                  <Check size={15} strokeWidth={2} />
                 ) : (
-                  <Copy size={13} strokeWidth={1.7} />
+                  <Copy size={15} strokeWidth={1.7} />
                 )}
                 复制完整 Prompt
               </button>
               <button
                 onClick={() => copyText(prompt.body, "raw")}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded border border-line bg-canvas py-2 text-[12.5px] font-medium text-sub transition hover:bg-soft hover:text-ink"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-canvas py-2.5 text-[14px] font-semibold text-sub transition hover:bg-soft hover:text-ink"
               >
                 {copied === "raw" ? (
-                  <Check size={13} strokeWidth={2} className="text-moss" />
+                  <Check size={15} strokeWidth={2} className="text-moss" />
                 ) : (
-                  <Copy size={13} strokeWidth={1.7} />
+                  <Copy size={15} strokeWidth={1.7} />
                 )}
                 复制原 Prompt
               </button>
@@ -289,13 +277,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-line/70 px-5 py-4 last:border-b-0">
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-[13.5px] font-medium tracking-tight text-ink">
+    <div className="border-b border-line/70 px-5 py-5 last:border-b-0">
+      <div className="mb-3 flex items-baseline justify-between">
+        <span className="text-[15px] font-semibold tracking-tight text-ink">
           {title}
         </span>
         {hint && (
-          <span className="text-[11px] tabular-nums text-hint">{hint}</span>
+          <span className="text-xs tabular-nums text-hint">{hint}</span>
         )}
       </div>
       {children}

@@ -31,7 +31,7 @@ export function InlineEditable({
 
   // 非编辑态时，外部 value 变化要同步到 draft
   useEffect(() => {
-    if (!editing) setDraft(value);
+    if (!editing) queueMicrotask(() => setDraft(value));
   }, [value, editing]);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export function InlineEditable({
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           rows={3}
-          className={`w-full resize-y rounded border border-moss/40 bg-paper px-2 py-1 text-[13.5px] leading-relaxed text-ink outline-none focus:border-moss ${inputClassName}`}
+          className={`w-full resize-y rounded-lg border border-moss/40 bg-paper px-3 py-2 text-[14.5px] leading-relaxed text-ink outline-none focus:border-moss ${inputClassName}`}
         />
       );
     }
@@ -108,7 +108,7 @@ export function InlineEditable({
         onBlur={commit}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className={`w-full rounded border border-moss/40 bg-paper px-2 py-1 text-[13.5px] text-ink outline-none focus:border-moss ${inputClassName}`}
+        className={`w-full rounded-lg border border-moss/40 bg-paper px-3 py-2 text-[14.5px] text-ink outline-none focus:border-moss ${inputClassName}`}
       />
     );
   }
@@ -119,7 +119,7 @@ export function InlineEditable({
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className={`group block w-full cursor-text rounded px-2 py-1 text-left transition-colors hover:bg-soft/60 ${
+      className={`group block w-full cursor-text rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-soft/60 ${
         isEmpty ? "italic text-hint" : "text-ink"
       } ${className}`}
       title="点击编辑"

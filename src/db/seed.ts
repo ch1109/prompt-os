@@ -5,6 +5,7 @@ import { seedPlaceholderPrompts } from "./migrations/v3";
 import { seedDefaultTaskPacks } from "./migrations/v6Seed";
 import { repairBadTitles } from "./repairTitles";
 import { seedPromptOSV31 } from "./migrations/v31Seed";
+import { SCENE_DEFS } from "@/data/promptos-v3-1";
 
 const DEFAULT_FIRST_LEVEL = [
   "工作场景",
@@ -132,8 +133,52 @@ export async function seedPromptsFromFile() {
  * db 版本号升到 v7 后会清空 prompts/scenarios/taskPacks 三表，
  * 再由 seedPromptOSV31() 按文档结构重建。函数本身保留，便于代码考古。
  */
+/**
+ * 老用户的 scenarios 表没有 order 字段，按以下策略幂等补全：
+ * - v3.1 出厂场景按 SCENE_DEFS 数组顺序赋 order = i*10
+ * - 其余自定义场景按 parentId 分组，追加在末尾，每组内保持当前 toArray() 顺序
+ * - 已经有 order 的记录不动，直接跳过
+ */
+export async function backfillScenarioOrder() {
+  const all = await db.scenarios.toArray();
+  const missing = all.filter((s) => typeof s.order !== "number");
+  if (!missing.length) return;
+
+  const sceneDefIndex = new Map(SCENE_DEFS.map((s, i) => [s.id, i] as const));
+  const patches: Scenario[] = [];
+
+  // 1) v3.1 出厂场景按定义顺序
+  for (const s of missing) {
+    const idx = sceneDefIndex.get(s.id);
+    if (idx !== undefined) patches.push({ ...s, order: idx * 10 });
+  }
+
+  // 2) 自定义场景按 parentId 分组，追加在该组现有 order 末尾
+  const customs = missing.filter((s) => !sceneDefIndex.has(s.id));
+  const byParent = new Map<string | null, Scenario[]>();
+  for (const s of customs) {
+    const arr = byParent.get(s.parentId) ?? [];
+    arr.push(s);
+    byParent.set(s.parentId, arr);
+  }
+  for (const [parentId, group] of byParent) {
+    const existingOrders = all
+      .filter((s) => s.parentId === parentId && typeof s.order === "number")
+      .map((s) => s.order)
+      .concat(patches.filter((s) => s.parentId === parentId).map((s) => s.order));
+    const baseMax = existingOrders.length ? Math.max(...existingOrders) : -10;
+    group.forEach((s, i) => patches.push({ ...s, order: baseMax + (i + 1) * 10 }));
+  }
+
+  if (patches.length) {
+    await db.scenarios.bulkPut(patches);
+    if (import.meta.env.DEV) console.log(`[Prompt OS] 补全 ${patches.length} 个场景的 order 字段`);
+  }
+}
+
 export async function seedAll() {
   await seedPromptOSV31();
+  await backfillScenarioOrder();
 }
 
 // 旧 seed 函数仍然 export，避免外部模块（如测试、备份脚本）引用断裂；

@@ -61,6 +61,8 @@ export interface Scenario {
   fullPath: string[]; // 例如 ["读书场景","选书规划","选书与规划"]
   description: string;
   tags: string[];
+  /** 同 parentId 兄弟节点内排序键，升序展示。出厂数据按 i*10 间隔预留插入空间。 */
+  order: number;
   // PRD 10.3：场景内可绑定的资产引用与典型任务清单
   recommendedPrompts?: string[];
   recommendedWorkflows?: string[];
