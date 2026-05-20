@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Workflow as WorkflowIcon,
   Monitor,
@@ -6,12 +6,24 @@ import {
   Moon,
   Download,
   Upload,
+  Camera,
+  Trash2,
+  RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import { useSettings, type ThemeMode } from "@/store/settingsStore";
 import { buildRelationGraph } from "@/services/relationBuilder";
 import { exportAllData, importBackupFromFile, type ImportOutcome } from "@/services/backup";
 import { toast } from "@/store/toastStore";
 import { confirm } from "@/store/confirmStore";
+import {
+  listSnapshots,
+  takeSnapshot,
+  restoreSnapshot,
+  deleteSnapshot,
+  REASON_LABELS,
+  type SnapshotEntry,
+} from "@/db/snapshot";
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { value: "system", label: "跟随系统", Icon: Monitor },
@@ -31,6 +43,63 @@ export default function Settings() {
   const [backupBusy, setBackupBusy] = useState<"idle" | "exporting" | "importing">("idle");
   const [lastImport, setLastImport] = useState<ImportOutcome | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
+  const [snapshotBusy, setSnapshotBusy] = useState<string | "creating" | null>(null);
+
+  useEffect(() => {
+    setSnapshots(listSnapshots());
+  }, []);
+
+  async function handleCreateSnapshot() {
+    setSnapshotBusy("creating");
+    try {
+      const entry = await takeSnapshot("manual");
+      setSnapshots(listSnapshots());
+      if (entry) {
+        const total = entry.counts.prompts + entry.counts.scenarios + entry.counts.taskPacks;
+        toast.success(`已生成快照（${total} 条记录 · ${formatBytes(entry.sizeBytes)}）`);
+      } else {
+        toast.info("当前数据库为空，未生成快照");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "生成快照失败");
+    } finally {
+      setSnapshotBusy(null);
+    }
+  }
+
+  async function handleRestoreSnapshot(entry: SnapshotEntry) {
+    const ok = await confirm({
+      title: "确认恢复到该快照",
+      message: `将清空当前 Prompt / 场景 / 任务包并替换为 ${formatRelative(entry.at)} 的快照内容（${entry.counts.prompts} Prompt · ${entry.counts.scenarios} 场景 · ${entry.counts.taskPacks} 任务包）。Context 不受影响。`,
+      confirmText: "恢复",
+      danger: true,
+    });
+    if (!ok) return;
+    setSnapshotBusy(entry.key);
+    try {
+      await restoreSnapshot(entry.key);
+      toast.success("已恢复到该快照，刷新页面查看");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "恢复失败");
+    } finally {
+      setSnapshotBusy(null);
+      setSnapshots(listSnapshots());
+    }
+  }
+
+  async function handleDeleteSnapshot(entry: SnapshotEntry) {
+    const ok = await confirm({
+      title: "删除快照",
+      message: `删除 ${formatRelative(entry.at)} 的快照后无法找回，是否继续？`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
+    deleteSnapshot(entry.key);
+    setSnapshots(listSnapshots());
+  }
 
   function handleSave() {
     setSaved(true);
@@ -268,6 +337,98 @@ export default function Settings() {
           数据库。
         </p>
       </div>
+
+      <div className="space-y-3 rounded-lg border border-line p-4">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck size={14} className="text-moss" />
+          <h2 className="font-medium">本地快照</h2>
+        </div>
+        <p className="text-xs text-hint">
+          每次打开应用会自动把 Prompt / 场景 / 任务包的当前状态保存一份到浏览器
+          localStorage，最多保留最近 3 份。数据库 schema 升级前也会自动归档。Context
+          不在快照内（请用上方「导出全部数据」备份）。
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleCreateSnapshot}
+            disabled={snapshotBusy !== null}
+            className="inline-flex items-center gap-1.5 rounded border border-line bg-paper px-3 py-1.5 text-xs text-sub transition-colors hover:border-moss/40 hover:bg-moss-soft hover:text-moss disabled:opacity-40"
+          >
+            <Camera size={13} strokeWidth={1.7} />
+            {snapshotBusy === "creating" ? "生成中…" : "立即生成快照"}
+          </button>
+        </div>
+
+        {snapshots.length === 0 ? (
+          <p className="text-xs text-hint">还没有快照。下次打开应用时会自动生成第一份。</p>
+        ) : (
+          <ul className="divide-y divide-line rounded-md border border-line">
+            {snapshots.map((s) => {
+              const busy = snapshotBusy === s.key;
+              return (
+                <li key={s.key} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="font-medium text-ink tabular-nums">
+                        {formatRelative(s.at)}
+                      </span>
+                      <span className="rounded bg-soft px-1.5 py-0.5 text-[10px] text-sub">
+                        {REASON_LABELS[s.reason]}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-hint tabular-nums">
+                      Prompt {s.counts.prompts} · 场景 {s.counts.scenarios} · 任务包{" "}
+                      {s.counts.taskPacks} · {formatBytes(s.sizeBytes)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => handleRestoreSnapshot(s)}
+                      disabled={snapshotBusy !== null}
+                      title="恢复"
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-sub transition-colors hover:bg-moss-soft hover:text-moss disabled:opacity-40"
+                    >
+                      <RotateCcw size={12} strokeWidth={1.7} />
+                      {busy ? "恢复中…" : "恢复"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSnapshot(s)}
+                      disabled={snapshotBusy !== null}
+                      title="删除"
+                      className="inline-flex items-center rounded p-1 text-hint transition-colors hover:bg-soft hover:text-red-500 disabled:opacity-40"
+                    >
+                      <Trash2 size={12} strokeWidth={1.7} />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
+}
+
+function formatRelative(ts: number): string {
+  const d = new Date(ts);
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "刚刚";
+  if (mins < 60) return `${mins} 分钟前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} 天前`;
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }

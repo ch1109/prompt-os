@@ -17,6 +17,8 @@ export default {
         "moss-soft": "rgb(var(--moss-soft) / <alpha-value>)",
         amber: "rgb(var(--amber) / <alpha-value>)",
         "amber-soft": "rgb(var(--amber-soft) / <alpha-value>)",
+        lilac: "rgb(var(--flow-lilac) / <alpha-value>)",
+        "lilac-soft": "rgb(var(--flow-lilac-soft) / <alpha-value>)",
 
         // 兼容旧引用（仍然走 CSS 变量）
         border: "rgb(var(--line) / <alpha-value>)",

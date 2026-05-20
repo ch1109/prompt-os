@@ -117,6 +117,8 @@ export interface TaskPack {
   lastUsedAt: number | null;
   createdAt: number;
   updatedAt: number;
+  /** 同一 sceneCategoryId 下兄弟节点的排序键，升序展示。新建/迁移按 i*10 间隔预留插入空间。 */
+  order: number;
 }
 
 export interface SharedTemplate {

@@ -44,6 +44,17 @@ export function AddPromptPopover({
     else inputRef.current?.focus();
   }, [pasteMode]);
 
+  // 挂载后把弹窗滚动到视口中央，避免靠近底部时被截断
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      containerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   // 外部点击关闭
   useEffect(() => {
     function onPointer(e: PointerEvent) {

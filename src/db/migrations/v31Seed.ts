@@ -33,7 +33,13 @@ export async function seedPromptOSV31(): Promise<void> {
   }));
 
   const prompts: Prompt[] = PACK_DEFS.map((d) => packToPrompt(d, now));
-  const packs: TaskPack[] = PACK_DEFS.map((d) => packToTaskPack(d, now));
+  // 同一 sceneId 内按 PACK_DEFS 出现顺序为子场景赋 order = i*10
+  const orderCounter = new Map<string, number>();
+  const packs: TaskPack[] = PACK_DEFS.map((d) => {
+    const idx = orderCounter.get(d.sceneId) ?? 0;
+    orderCounter.set(d.sceneId, idx + 1);
+    return packToTaskPack(d, now, idx * 10);
+  });
 
   await db.scenarios.bulkAdd(scenarios);
 
@@ -82,7 +88,7 @@ function packToPrompt(d: PackDef, ts: number): Prompt {
   };
 }
 
-function packToTaskPack(d: PackDef, ts: number): TaskPack {
+function packToTaskPack(d: PackDef, ts: number, order: number): TaskPack {
   const stage: TaskStage = {
     id: nanoid(),
     name: "核心 Prompt",
@@ -101,6 +107,7 @@ function packToTaskPack(d: PackDef, ts: number): TaskPack {
     isFavorited: false,
     useCount: 0,
     lastUsedAt: null,
+    order,
     createdAt: ts,
     updatedAt: ts,
   };

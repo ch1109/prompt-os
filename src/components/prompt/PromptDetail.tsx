@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, Copy, Layers, Pencil, Star, Trash2, Wand2, X } from "lucide-react";
+import { AlertCircle, Check, Copy, Layers, Pencil, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { MarkdownView } from "@/components/MarkdownView";
 import { db } from "@/db";
-import { deletePrompt, incrementUseCount, toggleFavorite } from "@/db/repos/promptRepo";
+import { deletePrompt, incrementUseCount, toggleFavorite, updatePrompt } from "@/db/repos/promptRepo";
 import { extractVariables, isLongValue, renderTemplate } from "@/services/templateVariables";
 import { confirm } from "@/store/confirmStore";
 import { useUI } from "@/store/uiStore";
@@ -83,6 +83,22 @@ export function PromptDetail({ onEdit }: Props) {
               className={prompt.isFavorited ? "fill-amber text-amber" : "text-hint hover:text-amber"}
             />
           </button>
+          <button
+            onClick={() =>
+              updatePrompt(prompt.id, { pendingReview: !prompt.pendingReview })
+            }
+            title={prompt.pendingReview ? "取消「待优化」标记" : "标记为待优化"}
+          >
+            <Sparkles
+              size={17}
+              strokeWidth={1.6}
+              className={
+                prompt.pendingReview
+                  ? "fill-lilac text-lilac"
+                  : "text-hint hover:text-lilac"
+              }
+            />
+          </button>
           <button onClick={() => onEdit(prompt.id)} title="编辑">
             <Pencil size={17} strokeWidth={1.6} className="text-hint hover:text-moss" />
           </button>
@@ -96,10 +112,27 @@ export function PromptDetail({ onEdit }: Props) {
       </div>
 
       {/* 元信息 */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <span className="chip chip-task chip-mono uppercase tracking-wider2">{prompt.taskType}</span>
         <span className="chip chip-mono">{prompt.difficulty}</span>
         <span className="chip chip-mono">{prompt.valueLevel}</span>
+        <button
+          onClick={() =>
+            updatePrompt(prompt.id, { pendingReview: !prompt.pendingReview })
+          }
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition ${
+            prompt.pendingReview
+              ? "border-lilac/70 bg-lilac text-paper shadow-[0_8px_18px_-14px_rgb(var(--flow-lilac)/0.9)] hover:bg-lilac/90"
+              : "border-lilac/40 bg-lilac-soft text-lilac hover:border-lilac/60 hover:bg-lilac-soft/80"
+          }`}
+        >
+          {prompt.pendingReview ? (
+            <Check size={13} strokeWidth={2.2} />
+          ) : (
+            <AlertCircle size={13} strokeWidth={2} />
+          )}
+          {prompt.pendingReview ? "已标为待优化" : "标记为待优化"}
+        </button>
       </div>
 
       {/* 正文 */}

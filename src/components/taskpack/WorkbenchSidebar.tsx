@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, ChevronRight, Clock, Plus, Search, Star, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Clock,
+  Plus,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { useScenarios } from "@/hooks/useScenarios";
@@ -9,6 +18,8 @@ import {
   renameScenario,
   reorderSiblings,
 } from "@/db/repos/scenarioRepo";
+import { deleteTaskPack, reorderTaskPacks } from "@/db/repos/taskPackRepo";
+import { confirm } from "@/store/confirmStore";
 import { toast } from "@/store/toastStore";
 import type { Scenario, TaskPack } from "@/types";
 import { ContextSection } from "./ContextSection";
@@ -25,6 +36,7 @@ export function WorkbenchSidebar() {
   const {
     selectedTaskPackId,
     setSelectedTaskPack,
+    setSelectedPrompt,
     expandedSceneCategoryIds,
     toggleSceneCategoryExpanded,
     setSceneCategoryExpanded,
@@ -54,6 +66,10 @@ export function WorkbenchSidebar() {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; edge: DropEdge } | null>(null);
+
+  // 子场景(TaskPack)拖拽态，独立于一级场景，避免互相干扰
+  const [draggingPackId, setDraggingPackId] = useState<string | null>(null);
+  const [packDropTarget, setPackDropTarget] = useState<{ id: string; edge: DropEdge } | null>(null);
 
   async function handleSceneRename(id: string, nextTitle: string) {
     const scn = firstLevel.find((s) => s.id === id);
@@ -121,10 +137,51 @@ export function WorkbenchSidebar() {
       m.set(p.sceneCategoryId, arr);
     }
     for (const arr of m.values()) {
-      arr.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+      arr.sort((a, b) => {
+        const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+        const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+        if (ao !== bo) return ao - bo;
+        return a.title.localeCompare(b.title, "zh");
+      });
     }
     return m;
   }, [taskPacks]);
+
+  async function handlePackDelete(pack: TaskPack) {
+    const ok = await confirm({
+      title: "删除子场景？",
+      message: `「${pack.title || "未命名子场景"}」会被删除，但其引用的 Prompt 不会被删除。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
+    await deleteTaskPack(pack.id);
+    if (selectedTaskPackId === pack.id) {
+      setSelectedTaskPack(null);
+      setSelectedPrompt(null);
+    }
+    toast.success("已删除子场景");
+  }
+
+  async function handlePackDrop(targetId: string, edge: DropEdge) {
+    setPackDropTarget(null);
+    if (!draggingPackId || draggingPackId === targetId) return;
+    const source = taskPacks.find((p) => p.id === draggingPackId);
+    const target = taskPacks.find((p) => p.id === targetId);
+    setDraggingPackId(null);
+    if (!source || !target) return;
+    if (source.sceneCategoryId !== target.sceneCategoryId) {
+      toast.info("只能在同一场景内调整顺序");
+      return;
+    }
+    const siblings = packsByScene.get(target.sceneCategoryId) ?? [];
+    const without = siblings.filter((p) => p.id !== source.id);
+    const targetIdx = without.findIndex((p) => p.id === target.id);
+    if (targetIdx === -1) return;
+    const insertAt = edge === "before" ? targetIdx : targetIdx + 1;
+    const reordered = [...without.slice(0, insertAt), source, ...without.slice(insertAt)];
+    await reorderTaskPacks(reordered.map((p) => p.id));
+  }
 
   const filteredPacks = useMemo(() => {
     let list = taskPacks;
@@ -274,7 +331,34 @@ export function WorkbenchSidebar() {
                             key={pack.id}
                             pack={pack}
                             active={selectedTaskPackId === pack.id}
+                            isDragging={draggingPackId === pack.id}
+                            dropEdge={
+                              packDropTarget?.id === pack.id
+                                ? packDropTarget.edge
+                                : null
+                            }
                             onSelect={() => setSelectedTaskPack(pack.id)}
+                            onDragStart={() => setDraggingPackId(pack.id)}
+                            onDragEnd={() => {
+                              setDraggingPackId(null);
+                              setPackDropTarget(null);
+                            }}
+                            onDragOverEdge={(edge) => {
+                              if (!draggingPackId || draggingPackId === pack.id) return;
+                              const src = taskPacks.find((p) => p.id === draggingPackId);
+                              if (!src || src.sceneCategoryId !== pack.sceneCategoryId) return;
+                              if (
+                                packDropTarget?.id !== pack.id ||
+                                packDropTarget.edge !== edge
+                              ) {
+                                setPackDropTarget({ id: pack.id, edge });
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (packDropTarget?.id === pack.id) setPackDropTarget(null);
+                            }}
+                            onDrop={(edge) => handlePackDrop(pack.id, edge)}
+                            onDelete={() => handlePackDelete(pack)}
                           />
                         ))
                       )}
@@ -496,17 +580,60 @@ function SceneRow({
 function PackRow({
   pack,
   active,
+  isDragging,
+  dropEdge,
   onSelect,
+  onDragStart,
+  onDragEnd,
+  onDragOverEdge,
+  onDragLeave,
+  onDrop,
+  onDelete,
 }: {
   pack: TaskPack;
   active: boolean;
+  isDragging: boolean;
+  dropEdge: DropEdge | null;
   onSelect: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOverEdge: (edge: DropEdge) => void;
+  onDragLeave: () => void;
+  onDrop: (edge: DropEdge) => void;
+  onDelete: () => void;
 }) {
   return (
-    <li>
+    <li
+      className={`group/pack relative ${isDragging ? "opacity-40" : ""}`}
+      draggable
+      onDragStart={(e) => {
+        onDragStart();
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", pack.id);
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = e.currentTarget.getBoundingClientRect();
+        const edge: DropEdge =
+          e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+        onDragOverEdge(edge);
+      }}
+      onDragLeave={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (!e.currentTarget.contains(next)) onDragLeave();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (dropEdge) onDrop(dropEdge);
+      }}
+    >
+      {dropEdge === "before" && <DropIndicator position="top" insetLeft={10} />}
+      {dropEdge === "after" && <DropIndicator position="bottom" insetLeft={10} />}
       <button
         onClick={onSelect}
-        className={`group relative flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13.5px] transition-colors ${
+        className={`group relative flex w-full items-center gap-2 rounded-md py-1.5 pl-2.5 pr-9 text-left text-[13.5px] transition-colors ${
           active
             ? "bg-soft font-medium text-ink"
             : "text-sub hover:bg-soft/60 hover:text-ink"
@@ -524,6 +651,18 @@ function PackRow({
         {pack.isFavorited && (
           <Star size={12} strokeWidth={2} className="shrink-0 fill-amber text-amber" />
         )}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title={`删除「${pack.title || "未命名子场景"}」`}
+        aria-label={`删除「${pack.title || "未命名子场景"}」`}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-hint/70 opacity-0 transition group-hover/pack:opacity-100 hover:bg-paper hover:text-red-500 focus:opacity-100"
+      >
+        <Trash2 size={13} strokeWidth={1.8} />
       </button>
     </li>
   );

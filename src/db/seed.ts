@@ -5,7 +5,9 @@ import { seedPlaceholderPrompts } from "./migrations/v3";
 import { seedDefaultTaskPacks } from "./migrations/v6Seed";
 import { repairBadTitles } from "./repairTitles";
 import { seedPromptOSV31 } from "./migrations/v31Seed";
+import { seedAiCodingZeroToOne } from "./migrations/zeroToOneSeed";
 import { SCENE_DEFS } from "@/data/promptos-v3-1";
+import { takeSnapshot } from "./snapshot";
 
 const DEFAULT_FIRST_LEVEL = [
   "工作场景",
@@ -177,7 +179,16 @@ export async function backfillScenarioOrder() {
 }
 
 export async function seedAll() {
+  // 启动期自动快照：稳态下保留前一次启动时的全量备份；
+  // 升级当天三表已被 hook 清空 → takeSnapshot 返回 null，不动旧快照；
+  // 写入失败也只 warn，绝不阻塞 seedPromptOSV31。
+  try {
+    await takeSnapshot("startup");
+  } catch (e) {
+    console.warn("[Prompt OS] 启动快照失败（不影响后续 seed）", e);
+  }
   await seedPromptOSV31();
+  await seedAiCodingZeroToOne();
   await backfillScenarioOrder();
 }
 

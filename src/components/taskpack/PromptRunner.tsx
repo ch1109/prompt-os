@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, Copy, Pencil, X } from "lucide-react";
+import { AlertCircle, Check, Copy, Pencil, Sparkles, X } from "lucide-react";
 import { db } from "@/db";
-import { incrementUseCount as bumpPromptUse } from "@/db/repos/promptRepo";
+import {
+  incrementUseCount as bumpPromptUse,
+  updatePrompt,
+} from "@/db/repos/promptRepo";
 import { incrementUseCount as bumpTaskPackUse } from "@/db/repos/taskPackRepo";
 import { useUI } from "@/store/uiStore";
 import { MarkdownView } from "@/components/MarkdownView";
@@ -124,13 +127,47 @@ export function PromptRunner({
             <h2 className="serif truncate text-[22px] font-semibold leading-tight text-ink">
               {prompt.title}
             </h2>
-            <p className="mt-2 text-[13.5px] text-sub">
-              阶段：
-              {stageOfPrompt
-                ? stageOfPrompt.stage.name || `阶段 ${stageOfPrompt.index + 1}`
-                : "独立 Prompt"}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13.5px] text-sub">
+              <span>
+                阶段：
+                {stageOfPrompt
+                  ? stageOfPrompt.stage.name || `阶段 ${stageOfPrompt.index + 1}`
+                  : "独立 Prompt"}
+              </span>
+              <button
+                onClick={() =>
+                  updatePrompt(prompt.id, {
+                    pendingReview: !prompt.pendingReview,
+                  })
+                }
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition ${
+                  prompt.pendingReview
+                    ? "border-lilac/70 bg-lilac text-paper shadow-[0_8px_18px_-14px_rgb(var(--flow-lilac)/0.9)] hover:bg-lilac/90"
+                    : "border-lilac/40 bg-lilac-soft text-lilac hover:border-lilac/60 hover:bg-lilac-soft/80"
+                }`}
+              >
+                {prompt.pendingReview ? (
+                  <Check size={13} strokeWidth={2.2} />
+                ) : (
+                  <AlertCircle size={13} strokeWidth={2} />
+                )}
+                {prompt.pendingReview ? "已标为待优化" : "标记为待优化"}
+              </button>
+            </div>
           </div>
+          <button
+            onClick={() =>
+              updatePrompt(prompt.id, { pendingReview: !prompt.pendingReview })
+            }
+            title={prompt.pendingReview ? "取消「待优化」标记" : "标记为待优化"}
+            className="rounded-md p-2 text-hint hover:bg-soft hover:text-lilac"
+          >
+            <Sparkles
+              size={17}
+              strokeWidth={1.6}
+              className={prompt.pendingReview ? "fill-lilac text-lilac" : ""}
+            />
+          </button>
           <button
             onClick={() => setEditorOpen(true)}
             title="编辑 Prompt"

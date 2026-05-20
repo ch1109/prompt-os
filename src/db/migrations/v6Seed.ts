@@ -153,6 +153,8 @@ export async function seedDefaultTaskPacks(): Promise<void> {
 
   const now = Date.now();
   const packs: TaskPack[] = [];
+  // 同 sceneId 内按 SEEDS 出现顺序赋 order = i*10
+  const orderCounter = new Map<string, number>();
 
   for (const def of SEEDS) {
     const sceneId = sceneIdByTitle.get(def.sceneTitle);
@@ -164,6 +166,8 @@ export async function seedDefaultTaskPacks(): Promise<void> {
       promptIds: pickPromptsFor(prompts, def.sceneTitle, s.keywords, s.limit ?? 3),
       order: idx,
     }));
+    const orderIdx = orderCounter.get(sceneId) ?? 0;
+    orderCounter.set(sceneId, orderIdx + 1);
     packs.push({
       id: nanoid(),
       title: def.title,
@@ -175,6 +179,7 @@ export async function seedDefaultTaskPacks(): Promise<void> {
       isFavorited: false,
       useCount: 0,
       lastUsedAt: null,
+      order: orderIdx * 10,
       createdAt: now,
       updatedAt: now,
     });

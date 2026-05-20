@@ -8,6 +8,7 @@ import {
   listByScene,
   listFavorites,
   listRecent,
+  reorderTaskPacks,
 } from "./taskPackRepo";
 
 describe("taskPackRepo", () => {
@@ -99,5 +100,46 @@ describe("taskPackRepo", () => {
     await incrementUseCount(b.id);
     const recent = await listRecent();
     expect(recent.map((p) => p.title)).toEqual(["B", "A"]);
+  });
+
+  it("createTaskPack 默认 order 按同 scene 内单调递增，新建追加到末尾", async () => {
+    const a = await createTaskPack({ title: "A", sceneCategoryId: "scn-1" });
+    const b = await createTaskPack({ title: "B", sceneCategoryId: "scn-1" });
+    const c = await createTaskPack({ title: "C", sceneCategoryId: "scn-1" });
+    // 不同 scene 之间不共享序列
+    const x = await createTaskPack({ title: "X", sceneCategoryId: "scn-2" });
+    expect(a.order).toBe(0);
+    expect(b.order).toBe(10);
+    expect(c.order).toBe(20);
+    expect(x.order).toBe(0);
+  });
+
+  it("reorderTaskPacks 按传入顺序写 order 且不刷新 updatedAt", async () => {
+    const a = await createTaskPack({ title: "A", sceneCategoryId: "scn-r" });
+    const b = await createTaskPack({ title: "B", sceneCategoryId: "scn-r" });
+    const c = await createTaskPack({ title: "C", sceneCategoryId: "scn-r" });
+    await new Promise((r) => setTimeout(r, 5));
+    const n = await reorderTaskPacks([c.id, a.id, b.id]);
+    expect(n).toBe(3);
+    const [na, nb, nc] = await Promise.all([
+      db.taskPacks.get(a.id),
+      db.taskPacks.get(b.id),
+      db.taskPacks.get(c.id),
+    ]);
+    expect(nc!.order).toBe(0);
+    expect(na!.order).toBe(10);
+    expect(nb!.order).toBe(20);
+    expect(na!.updatedAt).toBe(a.updatedAt);
+    expect(nb!.updatedAt).toBe(b.updatedAt);
+    expect(nc!.updatedAt).toBe(c.updatedAt);
+  });
+
+  it("reorderTaskPacks 跨 sceneCategoryId 时拒绝写入并返回 0", async () => {
+    const a = await createTaskPack({ title: "A", sceneCategoryId: "scn-1" });
+    const x = await createTaskPack({ title: "X", sceneCategoryId: "scn-2" });
+    const n = await reorderTaskPacks([a.id, x.id]);
+    expect(n).toBe(0);
+    expect((await db.taskPacks.get(a.id))!.order).toBe(a.order);
+    expect((await db.taskPacks.get(x.id))!.order).toBe(x.order);
   });
 });

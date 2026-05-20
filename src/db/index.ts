@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import type { Prompt, Context, Scenario, Workflow, SharedTemplate, TaskPack } from "@/types";
 import { migratePromptScenarios } from "./migrations/v3";
 import { deleteNonPromptEntries } from "./migrations/v5";
+import { writeMigrationArchive } from "./snapshot";
 
 export class PromptOSDB extends Dexie {
   prompts!: Table<Prompt, string>;
@@ -121,9 +122,52 @@ export class PromptOSDB extends Dexie {
           "id, sceneCategoryId, *tags, isFavorited, lastUsedAt, useCount, updatedAt",
       })
       .upgrade(async (tx) => {
+        // 铁律：destructive 升级前必须把现状归档到 localStorage，再清表。
+        // 归档失败不阻塞升级，但会留下控制台 warn，便于事后排查。
+        try {
+          const [prompts, scenarios, taskPacks] = await Promise.all([
+            tx.table<Prompt>("prompts").toArray(),
+            tx.table<Scenario>("scenarios").toArray(),
+            tx.table<TaskPack>("taskPacks").toArray(),
+          ]);
+          writeMigrationArchive({ prompts, scenarios, taskPacks });
+        } catch (e) {
+          console.warn("[Prompt OS] v7 升级归档失败（继续清表）", e);
+        }
         await tx.table("prompts").clear();
         await tx.table("scenarios").clear();
         await tx.table("taskPacks").clear();
+      });
+
+    // v8：为 TaskPack 增加 order 字段。原先按 updatedAt 倒序展示，
+    //     迁移时按相同顺序赋 order = i*10，保留升级前用户看到的顺序，
+    //     之后改由 order 升序排，"重命名跳顶"的现象就此消除。
+    //     stores 不变（order 仅做内存排序，不需要索引）。非 destructive，无需 archive。
+    this.version(8)
+      .stores({
+        prompts:
+          "id, title, taskType, difficulty, valueLevel, isFavorited, lastUsedAt, useCount, *tags, *primaryScenario, pendingReview, updatedAt",
+        contexts: "id, title, type, isDefault, *tags, updatedAt",
+        scenarios: "id, parentId, level, title, *fullPath",
+        workflows: "id, title, *tags, updatedAt",
+        sharedTemplates: "id, createdAt",
+        taskPacks:
+          "id, sceneCategoryId, *tags, isFavorited, lastUsedAt, useCount, updatedAt",
+      })
+      .upgrade(async (tx) => {
+        const all = await tx.table<TaskPack>("taskPacks").toArray();
+        const byScene = new Map<string, TaskPack[]>();
+        for (const p of all) {
+          const arr = byScene.get(p.sceneCategoryId) ?? [];
+          arr.push(p);
+          byScene.set(p.sceneCategoryId, arr);
+        }
+        const patches: TaskPack[] = [];
+        for (const arr of byScene.values()) {
+          arr.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+          arr.forEach((p, i) => patches.push({ ...p, order: i * 10 }));
+        }
+        if (patches.length) await tx.table("taskPacks").bulkPut(patches);
       });
   }
 }

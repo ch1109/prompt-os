@@ -39,15 +39,6 @@ const STAGE_TONES = [
   "flow-peach",
   "flow-lemon",
 ] as const;
-const PROMPT_TONE_BY_TASK_TYPE: Record<Prompt["taskType"], string> = {
-  分析: "flow-sky",
-  生成: "flow-mint",
-  改写: "flow-lilac",
-  总结: "flow-lemon",
-  规划: "flow-peach",
-  决策: "flow-sky",
-  复盘: "flow-mint",
-};
 
 function promptDroppableId(stageId: string): string {
   return `${PROMPT_DROPPABLE_PREFIX}${stageId}`;
@@ -262,7 +253,7 @@ export function TaskPackWorkspace() {
   }
 
   return (
-    <div className="page-enter mx-auto w-full max-w-5xl px-4 py-6 md:px-5 md:py-8 xl:px-10">
+    <div className="page-enter mx-auto w-full max-w-5xl px-4 pt-6 pb-[50vh] md:px-5 md:pt-8 xl:px-10">
       {/* 面包屑 */}
       <div className="mb-3 flex min-w-0 items-center gap-1.5 text-[13px] text-hint">
         {scene && (
@@ -738,8 +729,6 @@ function PromptRow({
   onPick: () => void;
   onRemove: () => void;
 }) {
-  const taskToneClass = PROMPT_TONE_BY_TASK_TYPE[p.taskType];
-
   return (
     <>
       <button
@@ -754,11 +743,11 @@ function PromptRow({
           <span className="block min-w-0 flex-1 truncate text-[15px] font-semibold leading-snug text-ink">
             {p.title}
           </span>
-          <span
-            className={`flow-prompt-type ${taskToneClass} chip-mono shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold`}
-          >
-            {p.taskType}
-          </span>
+          {p.pendingReview && (
+            <span className="chip-mono shrink-0 rounded-full border border-lilac/40 bg-lilac-soft px-2 py-0.5 text-[11px] font-semibold text-lilac">
+              待优化
+            </span>
+          )}
         </span>
         {p.summary && (
           <span className="block w-full truncate text-[13px] leading-relaxed text-sub/75">

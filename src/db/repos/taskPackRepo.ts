@@ -18,6 +18,15 @@ function normalizeStages(stages: TaskStage[] | undefined): TaskStage[] {
 export async function createTaskPack(
   input: Partial<TaskPack> & { title: string; sceneCategoryId: string }
 ): Promise<TaskPack> {
+  // 新建追加到同 sceneCategoryId 末尾：取当前最大 order + 10，无兄弟时为 0
+  let order = input.order;
+  if (order === undefined) {
+    const siblings = await db.taskPacks
+      .where("sceneCategoryId")
+      .equals(input.sceneCategoryId)
+      .toArray();
+    order = siblings.reduce((mx, p) => Math.max(mx, p.order ?? 0), -10) + 10;
+  }
   const pack: TaskPack = {
     id: nanoid(),
     title: input.title,
@@ -29,6 +38,7 @@ export async function createTaskPack(
     isFavorited: input.isFavorited ?? false,
     useCount: 0,
     lastUsedAt: null,
+    order,
     createdAt: now(),
     updatedAt: now(),
   };
@@ -84,4 +94,21 @@ export async function incrementUseCount(id: string) {
 
 export async function bulkInsert(packs: TaskPack[]) {
   await db.taskPacks.bulkAdd(packs);
+}
+
+/**
+ * 按 orderedIds 顺序为同一 sceneCategoryId 内的 TaskPack 重新分配 order。
+ * 以 i*10 写入并保留插入间隔。**不修改 updatedAt**（拖拽不算"编辑"，
+ * 避免被"最近"筛选误判）。调用方需保证传入的 ids 同属一个 sceneCategoryId，否则返回 0。
+ */
+export async function reorderTaskPacks(orderedIds: string[]): Promise<number> {
+  if (!orderedIds.length) return 0;
+  const records = await db.taskPacks.bulkGet(orderedIds);
+  const valid = records.filter((p): p is TaskPack => Boolean(p));
+  if (valid.length !== orderedIds.length) return 0;
+  const scene = valid[0].sceneCategoryId;
+  if (valid.some((p) => p.sceneCategoryId !== scene)) return 0;
+  const patches = valid.map((p, i) => ({ ...p, order: i * 10 }));
+  await db.taskPacks.bulkPut(patches);
+  return patches.length;
 }
