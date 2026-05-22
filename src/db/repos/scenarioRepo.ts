@@ -127,3 +127,71 @@ function pathStartsWith(path: string[] | undefined, prefix: string[]): boolean {
   for (let i = 0; i < prefix.length; i++) if (path[i] !== prefix[i]) return false;
   return true;
 }
+
+export interface CascadeDeleteResult {
+  removedScenarios: number;
+  removedTaskPacks: number;
+  removedPrompts: number;
+  touchedSecondary: number;
+}
+
+/**
+ * 级联删除一个一级场景：自身 + 所有后代 Scenario + 挂在它下面的 TaskPack
+ * + primaryScenario 命中此场景路径的 Prompt（一并删除）。
+ * secondaryScenarios 命中的 Prompt 仅移除该路径项，不删 Prompt（避免误伤多归属内容）。
+ * 在单个 Dexie 事务内完成，保证原子。
+ */
+export async function deleteScenarioCascade(id: string): Promise<CascadeDeleteResult> {
+  const target = await db.scenarios.get(id);
+  if (!target) throw new Error("场景不存在");
+  const rootPath = target.fullPath;
+
+  return db.transaction("rw", [db.scenarios, db.taskPacks, db.prompts], async () => {
+    // 1) 递归收集自身 + 后代 scenario id
+    const all = await db.scenarios.toArray();
+    const sceneIds = new Set<string>([id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const s of all) {
+        if (s.parentId && sceneIds.has(s.parentId) && !sceneIds.has(s.id)) {
+          sceneIds.add(s.id);
+          grew = true;
+        }
+      }
+    }
+
+    // 2) 收集挂在这些 scenario 下的 TaskPack
+    const packs = await db.taskPacks.where("sceneCategoryId").anyOf([...sceneIds]).toArray();
+    const packIds = packs.map((p) => p.id);
+
+    // 3) 扫 prompts：primary 命中 → 删；仅 secondary 命中 → patch
+    const prompts = await db.prompts.toArray();
+    const promptToDelete: string[] = [];
+    const promptPatches: Prompt[] = [];
+    for (const p of prompts) {
+      if (pathStartsWith(p.primaryScenario, rootPath)) {
+        promptToDelete.push(p.id);
+        continue;
+      }
+      const secondary = p.secondaryScenarios;
+      if (secondary?.some((sp) => pathStartsWith(sp, rootPath))) {
+        const next = secondary.filter((sp) => !pathStartsWith(sp, rootPath));
+        promptPatches.push({ ...p, secondaryScenarios: next, updatedAt: Date.now() });
+      }
+    }
+
+    // 4) 批量写入
+    await db.scenarios.bulkDelete([...sceneIds]);
+    if (packIds.length) await db.taskPacks.bulkDelete(packIds);
+    if (promptToDelete.length) await db.prompts.bulkDelete(promptToDelete);
+    if (promptPatches.length) await db.prompts.bulkPut(promptPatches);
+
+    return {
+      removedScenarios: sceneIds.size,
+      removedTaskPacks: packIds.length,
+      removedPrompts: promptToDelete.length,
+      touchedSecondary: promptPatches.length,
+    };
+  });
+}
