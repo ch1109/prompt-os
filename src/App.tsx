@@ -11,7 +11,7 @@ import { WorkbenchActions } from "@/components/layout/WorkbenchActions";
 const NAV = [
   { to: "/", label: "工作台" },
   { to: "/prompts", label: "Prompt 库" },
-  { to: "/templates", label: "模板" },
+  { to: "/redeem", label: "兑换" },
   { to: "/settings", label: "设置" },
 ];
 
