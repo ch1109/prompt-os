@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Check,
   ChevronRight,
   Clock,
+  PackagePlus,
   Plus,
   Search,
   Star,
@@ -13,8 +15,11 @@ import {
 import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { useScenarios } from "@/hooks/useScenarios";
+import { useAdminSession } from "@/admin/useAdminSession";
+import { collectSceneSubtree } from "@/services/scenePackHelper";
 import {
   createScenario,
+  deleteScenarioCascade,
   renameScenario,
   reorderSiblings,
 } from "@/db/repos/scenarioRepo";
@@ -23,6 +28,7 @@ import { confirm } from "@/store/confirmStore";
 import { toast } from "@/store/toastStore";
 import type { Scenario, TaskPack } from "@/types";
 import { ContextSection } from "./ContextSection";
+import { BatchPackModal } from "./BatchPackModal";
 import {
   DropIndicator,
   InlineEdit,
@@ -33,6 +39,8 @@ import {
 type FilterMode = "all" | "favorites" | "recent";
 
 export function WorkbenchSidebar() {
+  const navigate = useNavigate();
+  const { isAdmin } = useAdminSession();
   const {
     selectedTaskPackId,
     setSelectedTaskPack,
@@ -49,6 +57,7 @@ export function WorkbenchSidebar() {
 
   const [query, setQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [batchOpen, setBatchOpen] = useState(false);
 
   const firstLevel = useMemo(
     () =>
@@ -104,6 +113,69 @@ export function WorkbenchSidebar() {
     const insertAt = edge === "before" ? targetIdx : targetIdx + 1;
     const reordered = [...without.slice(0, insertAt), source, ...without.slice(insertAt)];
     await reorderSiblings(reordered.map((s) => s.id));
+  }
+
+  async function handleSceneDelete(scene: Scenario) {
+    const childPacks = (packsByScene.get(scene.id) ?? []).length;
+    const childScenes = allScenarios.filter(
+      (s) => s.id !== scene.id && s.fullPath?.[0] === scene.title
+    ).length;
+    const detail = [
+      childPacks > 0 ? `${childPacks} 个子场景` : "",
+      childScenes > 0 ? `${childScenes} 个子级目录` : "",
+      "归属此场景的所有 Prompt",
+    ]
+      .filter(Boolean)
+      .join("、");
+    const ok = await confirm({
+      title: `删除「${scene.title}」?`,
+      message: `将一并删除 ${detail}。此操作不可撤销。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const r = await deleteScenarioCascade(scene.id);
+      const selectedPack = taskPacks.find((p) => p.id === selectedTaskPackId);
+      if (selectedPack && selectedPack.sceneCategoryId === scene.id) {
+        setSelectedTaskPack(null);
+        setSelectedPrompt(null);
+      }
+      const parts = [
+        r.removedTaskPacks > 0 ? `${r.removedTaskPacks} 子场景` : null,
+        r.removedPrompts > 0 ? `${r.removedPrompts} Prompt` : null,
+        r.touchedSecondary > 0 ? `调整 ${r.touchedSecondary} 处副归属` : null,
+      ].filter(Boolean);
+      toast.success(
+        parts.length
+          ? `已删除「${scene.title}」（清理 ${parts.join(" / ")}）`
+          : `已删除「${scene.title}」`
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "删除失败");
+    }
+  }
+
+  async function handlePackToTemplate(scene: Scenario) {
+    const ids = await collectSceneSubtree(scene, allScenarios, packsByScene);
+    if (
+      ids.promptIds.length + ids.sceneIds.length + ids.taskPackIds.length ===
+      0
+    ) {
+      toast.info(`「${scene.title}」下没有可打包的内容`);
+      return;
+    }
+    navigate("/admin/templates/new", {
+      state: {
+        preselected: {
+          promptIds: ids.promptIds,
+          scenarioIds: ids.sceneIds,
+          taskPackIds: ids.taskPackIds,
+        },
+        suggestedTitle: `${scene.title} · 完整工作包`,
+        suggestedAudience: scene.title,
+      },
+    });
   }
 
   async function handleSceneMove(id: string, delta: -1 | 1) {
@@ -234,7 +306,7 @@ export function WorkbenchSidebar() {
             className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-hint"
           />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
           <FilterChip
             active={filterMode === "all"}
             onClick={() => setFilterMode("all")}
@@ -252,6 +324,16 @@ export function WorkbenchSidebar() {
             icon={<Clock size={12} strokeWidth={1.8} />}
             label="最近"
           />
+          {isAdmin && (
+            <button
+              onClick={() => setBatchOpen(true)}
+              title="批量打包多个场景为模板"
+              aria-label="批量打包为模板"
+              className="ml-auto rounded-md p-1.5 text-hint transition hover:bg-soft hover:text-moss"
+            >
+              <PackagePlus size={14} strokeWidth={1.8} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -295,6 +377,9 @@ export function WorkbenchSidebar() {
                     onCloseMenu={() => setMenuId(null)}
                     onMoveUp={() => handleSceneMove(scene.id, -1)}
                     onMoveDown={() => handleSceneMove(scene.id, 1)}
+                    onDelete={() => handleSceneDelete(scene)}
+                    onPackToTemplate={() => handlePackToTemplate(scene)}
+                    canPackToTemplate={isAdmin}
                     onDragStart={() => setDraggingId(scene.id)}
                     onDragEnd={() => {
                       setDraggingId(null);
@@ -382,6 +467,14 @@ export function WorkbenchSidebar() {
           }}
         />
       </div>
+
+      <BatchPackModal
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        firstLevel={firstLevel}
+        allScenarios={allScenarios}
+        packsByScene={packsByScene}
+      />
     </div>
   );
 }
@@ -431,6 +524,9 @@ function SceneRow({
   onCloseMenu,
   onMoveUp,
   onMoveDown,
+  onDelete,
+  onPackToTemplate,
+  canPackToTemplate,
   onDragStart,
   onDragEnd,
   onDragOverEdge,
@@ -455,6 +551,9 @@ function SceneRow({
   onCloseMenu: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onDelete: () => void;
+  onPackToTemplate: () => void;
+  canPackToTemplate: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDragOverEdge: (edge: DropEdge) => void;
@@ -548,6 +647,14 @@ function SceneRow({
             onClose={onCloseMenu}
             items={[
               { label: "重命名", onClick: () => { onCloseMenu(); onStartEdit(); } },
+              ...(canPackToTemplate
+                ? [
+                    {
+                      label: "打包为模板",
+                      onClick: () => { onCloseMenu(); onPackToTemplate(); },
+                    },
+                  ]
+                : []),
               {
                 label: "上移",
                 disabled: siblingIndex <= 0,
@@ -557,6 +664,11 @@ function SceneRow({
                 label: "下移",
                 disabled: siblingIndex < 0 || siblingIndex >= siblingCount - 1,
                 onClick: () => { onCloseMenu(); onMoveDown(); },
+              },
+              {
+                label: "删除大场景…",
+                danger: true,
+                onClick: () => { onCloseMenu(); onDelete(); },
               },
             ]}
           />
@@ -708,9 +820,12 @@ function NewSceneRow({ onCreated }: { onCreated: (scene: Scenario) => void }) {
     return (
       <button
         onClick={() => setEditing(true)}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-line py-2.5 text-[13.5px] font-medium text-moss/80 transition hover:border-moss/60 hover:bg-soft hover:text-moss"
+        className="group/new flex w-full items-center justify-center gap-2 rounded-lg border border-moss/30 bg-moss-soft/60 py-3 text-[14px] font-semibold text-moss shadow-sm transition hover:border-moss/60 hover:bg-moss-soft hover:shadow-md"
       >
-        <Plus size={14} strokeWidth={1.8} /> 新增场景大类
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-moss/15 transition group-hover/new:bg-moss/25">
+          <Plus size={13} strokeWidth={2.4} />
+        </span>
+        新增场景大类
       </button>
     );
   }
