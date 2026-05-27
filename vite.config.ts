@@ -7,6 +7,10 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
   test: {
     environment: "happy-dom",
     setupFiles: ["./src/test/setup.ts"],
