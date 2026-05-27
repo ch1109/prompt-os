@@ -116,12 +116,16 @@ export const useUI = create<UIState>()(
           },
         })),
       setSceneCategoryExpanded: (sceneId, expanded) =>
-        set((s) => ({
-          expandedSceneCategoryIds: {
-            ...s.expandedSceneCategoryIds,
-            [sceneId]: expanded,
-          },
-        })),
+        set((s) => {
+          // 值未变时返回同一引用，避免下游订阅者无意义重渲染
+          if (!!s.expandedSceneCategoryIds[sceneId] === !!expanded) return s;
+          return {
+            expandedSceneCategoryIds: {
+              ...s.expandedSceneCategoryIds,
+              [sceneId]: expanded,
+            },
+          };
+        }),
       toggleContextSection: () =>
         set((s) => ({ contextSectionExpanded: !s.contextSectionExpanded })),
       setContextSectionExpanded: (expanded) =>

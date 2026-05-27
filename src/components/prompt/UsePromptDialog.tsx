@@ -4,6 +4,7 @@ import { Sparkles, Star, X } from "lucide-react";
 import { db } from "@/db";
 import { incrementUseCount } from "@/db/repos/promptRepo";
 import { MarkdownView } from "@/components/MarkdownView";
+import { MountedContextChips } from "@/components/context/MountedContextChips";
 import type { Context, Prompt } from "@/types";
 
 interface Props {
@@ -118,6 +119,15 @@ export function UsePromptDialog({ prompt, onClose }: Props) {
           <button onClick={onClose} className="rounded p-1 text-hint hover:bg-soft hover:text-ink" aria-label="关闭">
             <X size={16} />
           </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-b border-line bg-soft/30 px-4 py-2">
+          <span className="text-[10px] uppercase tracking-wide text-hint">已挂载</span>
+          <MountedContextChips
+            prompt={prompt}
+            extraSelectedIds={[...selectedIds]}
+            editable
+            onChange={(ids) => setSelectedIds(new Set(ids))}
+          />
         </div>
         <div className="flex max-md:max-h-none max-md:flex-col flex-1 min-h-0 max-h-[70vh]">
           {/* 上下文选择 */}

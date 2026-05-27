@@ -29,6 +29,7 @@ import type { Prompt, TaskStage } from "@/types";
 import { InlineEditable } from "./InlineEditable";
 import { AddPromptPopover } from "./AddPromptPopover";
 import { TaskPackDraftForm } from "./TaskPackDraftForm";
+import { SceneDefaultContextPanel } from "@/components/context/SceneDefaultContextPanel";
 
 const STAGE_DROPPABLE_ID = "task-pack-stages";
 const PROMPT_DROPPABLE_PREFIX = "stage-prompts:";
@@ -332,6 +333,9 @@ export function TaskPackWorkspace() {
           className="text-[16px] leading-relaxed text-sub"
         />
       </div>
+
+      {/* 本场景默认上下文（折叠） */}
+      <SceneDefaultContextPanel sceneCategoryId={pack.sceneCategoryId} />
 
       {/* 元信息 */}
       <div className="mb-6 flex flex-wrap items-center gap-2 px-2 text-[13px] text-hint">

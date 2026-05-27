@@ -187,19 +187,19 @@ export function WorkbenchSidebar() {
     await reorderSiblings(reordered.map((s) => s.id));
   }
 
-  // 选中子场景后自动展开其父场景
+  // 选中 TaskPack 的父场景首次出现时自动展开一次；之后无论用户在同父场景内切兄弟 pack、
+  // 经 null 切回同一 pack、还是手动收起，都不再覆盖——ref 记忆"已自动展开的 sceneCategoryId"，
+  // 切到不同父场景时才再次自动展开。
+  // DO NOT 把 expandedSceneCategoryIds 加回依赖：会与用户手动收起形成 effect 自循环。
+  const autoExpandedForSceneRef = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedTaskPackId) return;
     const pack = taskPacks.find((p) => p.id === selectedTaskPackId);
-    if (pack && !expandedSceneCategoryIds[pack.sceneCategoryId]) {
-      setSceneCategoryExpanded(pack.sceneCategoryId, true);
-    }
-  }, [
-    selectedTaskPackId,
-    taskPacks,
-    expandedSceneCategoryIds,
-    setSceneCategoryExpanded,
-  ]);
+    if (!pack) return;
+    if (autoExpandedForSceneRef.current === pack.sceneCategoryId) return;
+    setSceneCategoryExpanded(pack.sceneCategoryId, true);
+    autoExpandedForSceneRef.current = pack.sceneCategoryId;
+  }, [selectedTaskPackId, taskPacks, setSceneCategoryExpanded]);
 
   const packsByScene = useMemo(() => {
     const m = new Map<string, TaskPack[]>();
@@ -272,6 +272,10 @@ export function WorkbenchSidebar() {
     return new Set(list.map((p) => p.id));
   }, [taskPacks, filterMode, query]);
 
+  // 搜索/筛选命中新场景时展开它；已经被自动展开过的场景即便仍在命中集合里也不再重复 set，
+  // 用户在搜索过程中手动收起的命中场景不会被下一次按键覆盖。
+  // DO NOT 把 expandedSceneCategoryIds 加回依赖：会与用户手动收起形成 effect 自循环。
+  const lastSearchExpandedScenesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!query.trim() && filterMode === "all") return;
     const sceneIdsToExpand = new Set<string>();
@@ -279,18 +283,12 @@ export function WorkbenchSidebar() {
       if (filteredPacks.has(p.id)) sceneIdsToExpand.add(p.sceneCategoryId);
     }
     for (const id of sceneIdsToExpand) {
-      if (!expandedSceneCategoryIds[id]) {
+      if (!lastSearchExpandedScenesRef.current.has(id)) {
         setSceneCategoryExpanded(id, true);
       }
     }
-  }, [
-    query,
-    filterMode,
-    filteredPacks,
-    taskPacks,
-    expandedSceneCategoryIds,
-    setSceneCategoryExpanded,
-  ]);
+    lastSearchExpandedScenesRef.current = sceneIdsToExpand;
+  }, [query, filterMode, filteredPacks, taskPacks, setSceneCategoryExpanded]);
 
   const noActiveFilter = !query.trim() && filterMode === "all";
 

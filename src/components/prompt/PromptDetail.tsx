@@ -8,6 +8,7 @@ import { extractVariables, isLongValue, renderTemplate } from "@/services/templa
 import { confirm } from "@/store/confirmStore";
 import { useUI } from "@/store/uiStore";
 import { UsePromptDialog } from "./UsePromptDialog";
+import { MountedContextChips } from "@/components/context/MountedContextChips";
 
 interface Props {
   onEdit: (id: string) => void;
@@ -162,6 +163,10 @@ export function PromptDetail({ onEdit }: Props) {
           >
             <Layers size={14} strokeWidth={1.8} /> 带上下文使用
           </button>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wide text-hint">已挂载上下文</span>
+          <MountedContextChips prompt={prompt} />
         </div>
       </Field>
       {slotOpen && variables.length > 0 && (
