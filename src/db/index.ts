@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import type { Prompt, Context, Scenario, Workflow, SharedTemplate, TaskPack } from "@/types";
 import { migratePromptScenarios } from "./migrations/v3";
 import { deleteNonPromptEntries } from "./migrations/v5";
+import { migrateContextTypesV9 } from "./migrations/v9";
 import { writeMigrationArchive } from "./snapshot";
 
 export class PromptOSDB extends Dexie {
@@ -168,6 +169,35 @@ export class PromptOSDB extends Dexie {
           arr.forEach((p, i) => patches.push({ ...p, order: i * 10 }));
         }
         if (patches.length) await tx.table("taskPacks").bulkPut(patches);
+      });
+
+    // v9：ContextType 联合完全替换为新 9 类；同时为所有 contexts 补 triggerStrategy / scope / enabled 默认值。
+    //     destructive 升级前严格归档：把旧 contexts 全量写入 localStorage（reason="migration"），
+    //     失败仅 warn 不阻塞。stores schema 不变（新字段不参与索引）。
+    this.version(9)
+      .stores({
+        prompts:
+          "id, title, taskType, difficulty, valueLevel, isFavorited, lastUsedAt, useCount, *tags, *primaryScenario, pendingReview, updatedAt",
+        contexts: "id, title, type, isDefault, *tags, updatedAt",
+        scenarios: "id, parentId, level, title, *fullPath",
+        workflows: "id, title, *tags, updatedAt",
+        sharedTemplates: "id, createdAt",
+        taskPacks:
+          "id, sceneCategoryId, *tags, isFavorited, lastUsedAt, useCount, updatedAt",
+      })
+      .upgrade(async (tx) => {
+        try {
+          const contexts = await tx.table<Context>("contexts").toArray();
+          writeMigrationArchive({
+            prompts: [],
+            scenarios: [],
+            taskPacks: [],
+            contexts,
+          });
+        } catch (e) {
+          console.warn("[Prompt OS] v9 升级归档失败（继续迁移）", e);
+        }
+        await migrateContextTypesV9(tx);
       });
   }
 }

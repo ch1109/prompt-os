@@ -1,5 +1,5 @@
 import { db } from "./index";
-import type { Prompt, Scenario, TaskPack } from "@/types";
+import type { Context, Prompt, Scenario, TaskPack } from "@/types";
 
 /**
  * 启动期自动快照 + Settings 手动恢复的存储层。
@@ -27,10 +27,17 @@ export const REASON_LABELS: Record<SnapshotReason, string> = REASONS;
 export interface SnapshotPayload {
   at: number;
   reason: SnapshotReason;
-  counts: { prompts: number; scenarios: number; taskPacks: number };
+  counts: {
+    prompts: number;
+    scenarios: number;
+    taskPacks: number;
+    contexts?: number;
+  };
   prompts: Prompt[];
   scenarios: Scenario[];
   taskPacks: TaskPack[];
+  /** v9 起可选携带 contexts（v9 升级 hook 与未来上下文相关 destructive 操作专用） */
+  contexts?: Context[];
 }
 
 export interface SnapshotEntry {
@@ -235,10 +242,18 @@ export function writeMigrationArchive(input: {
   prompts: Prompt[];
   scenarios: Scenario[];
   taskPacks: TaskPack[];
+  /** v9 起可选携带 contexts，v7 等历史调用点不传仍可工作 */
+  contexts?: Context[];
 }): SnapshotEntry | null {
   if (!lsAvailable()) return null;
-  const { prompts, scenarios, taskPacks } = input;
-  if (prompts.length === 0 && scenarios.length === 0 && taskPacks.length === 0) {
+  const { prompts, scenarios, taskPacks, contexts } = input;
+  const contextsLen = contexts?.length ?? 0;
+  if (
+    prompts.length === 0 &&
+    scenarios.length === 0 &&
+    taskPacks.length === 0 &&
+    contextsLen === 0
+  ) {
     return null;
   }
   const at = Date.now();
@@ -249,10 +264,12 @@ export function writeMigrationArchive(input: {
       prompts: prompts.length,
       scenarios: scenarios.length,
       taskPacks: taskPacks.length,
+      ...(contextsLen > 0 ? { contexts: contextsLen } : {}),
     },
     prompts,
     scenarios,
     taskPacks,
+    ...(contextsLen > 0 ? { contexts } : {}),
   };
   const serialized = JSON.stringify(payload);
   const key = keyFor(at);
