@@ -1,12 +1,25 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { createContext, updateContext, getContext } from "@/db/repos/contextRepo";
-import type { ContextType } from "@/types";
-
-const CONTEXT_TYPES: ContextType[] = [
-  "个人背景", "职业身份", "当前项目", "长期目标", "输出风格",
-  "任务背景", "产品介绍", "用户画像", "品牌信息", "常用限制条件",
-];
+import {
+  createContext,
+  getContext,
+  getTriggerStrategy,
+  updateContext,
+} from "@/db/repos/contextRepo";
+import type {
+  Context,
+  ContextScope,
+  ContextScopeRefs,
+  ContextTriggerConditions,
+  ContextTriggerStrategy as Strategy,
+  ContextType,
+} from "@/types";
+import { ContextTypeSelect } from "./ContextTypeSelect";
+import { ContextTagInput } from "./ContextTagInput";
+import { ContextTriggerStrategy } from "./ContextTriggerStrategy";
+import { ContextScopeSelector } from "./ContextScopeSelector";
+import { ContextVariableChips } from "./ContextVariableChips";
+import { ContextPreviewPanel } from "./ContextPreviewPanel";
 
 interface Props {
   open: boolean;
@@ -14,47 +27,85 @@ interface Props {
   onClose: () => void;
 }
 
-export function ContextEditor({ open, editId, onClose }: Props) {
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<ContextType>("个人背景");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState("");
-  const [isDefault, setIsDefault] = useState(false);
+const EMPTY_STATE = {
+  title: "",
+  description: "",
+  type: "角色人格" as ContextType,
+  content: "",
+  tags: [] as string[],
+  strategy: "manual" as Strategy,
+  conditions: undefined as ContextTriggerConditions | undefined,
+  scope: "global" as ContextScope,
+  scopeRefs: undefined as ContextScopeRefs | undefined,
+  enabled: true,
+};
 
+export function ContextEditor({ open, editId, onClose }: Props) {
+  const [state, setState] = useState(EMPTY_STATE);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // 响应 open/editId 变化加载数据；setLoading/setState 与项目内其它编辑器（PromptEditor）一致。
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     if (editId) {
+      setLoading(true);
       getContext(editId).then((c) => {
-        if (!c) return;
-        setTitle(c.title);
-        setType(c.type);
-        setContent(c.content);
-        setTags(c.tags.join(", "));
-        setIsDefault(c.isDefault);
+        if (!c) {
+          setLoading(false);
+          return;
+        }
+        setState({
+          title: c.title,
+          description: c.description ?? "",
+          type: c.type,
+          content: c.content,
+          tags: [...(c.tags ?? [])],
+          strategy: getTriggerStrategy(c),
+          conditions: c.triggerConditions,
+          scope: c.scope ?? "global",
+          scopeRefs: c.scopeRefs,
+          enabled: c.enabled ?? true,
+        });
+        setUpdatedAt(c.updatedAt);
+        setLoading(false);
       });
     } else {
-      setTitle("");
-      setType("个人背景");
-      setContent("");
-      setTags("");
-      setIsDefault(false);
+      setState(EMPTY_STATE);
+      setUpdatedAt(null);
     }
   }, [open, editId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  function patch<K extends keyof typeof EMPTY_STATE>(
+    key: K,
+    value: (typeof EMPTY_STATE)[K]
+  ) {
+    setState((s) => ({ ...s, [key]: value }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
-    const data = {
-      title: title.trim(),
-      type,
-      content,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-      isDefault,
+    if (!state.title.trim() || !state.content.trim()) return;
+    const payload: Partial<Context> & { title: string; content: string } = {
+      title: state.title.trim(),
+      description: state.description.trim(),
+      type: state.type,
+      content: state.content,
+      tags: state.tags,
+      triggerStrategy: state.strategy,
+      triggerConditions:
+        state.strategy === "conditional" ? state.conditions : undefined,
+      scope: state.scope,
+      scopeRefs: state.scope === "global" ? undefined : state.scopeRefs,
+      enabled: state.enabled,
+      isDefault: state.strategy === "always",
     };
     if (editId) {
-      await updateContext(editId, data);
+      await updateContext(editId, payload);
     } else {
-      await createContext(data);
+      await createContext(payload);
     }
     onClose();
   }
@@ -62,55 +113,162 @@ export function ContextEditor({ open, editId, onClose }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-16">
-      <div className="w-full max-w-lg rounded-xl bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="font-medium">{editId ? "编辑上下文" : "新建上下文"}</h2>
-          <button onClick={onClose} className="text-foreground/50 hover:text-foreground">
-            <X size={16} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
-          <div>
-            <label className="mb-1 block text-xs text-foreground/60">标题 *</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" required />
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-ink/40 md:items-start md:p-4 md:pt-10">
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-full max-w-5xl flex-col bg-paper shadow-xl md:rounded-xl md:max-h-[88vh]"
+      >
+        <header className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="flex flex-col">
+            <h2 className="font-medium text-ink">
+              {editId ? "编辑上下文" : "新建上下文"}
+            </h2>
+            <p className="text-[11px] text-hint">
+              配置类型、内容、标签与触发策略；右侧实时反馈使用效果
+            </p>
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-foreground/60">类型</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as ContextType)}
-              className="input"
+          <div className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-sub">
+              <input
+                type="checkbox"
+                checked={state.enabled}
+                onChange={(e) => patch("enabled", e.target.checked)}
+              />
+              启用
+            </label>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded p-1 text-hint hover:bg-soft hover:text-ink"
+              aria-label="关闭"
             >
-              {CONTEXT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-foreground/60">内容 *</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={5}
-              className="input resize-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-foreground/60">标签（逗号分隔）</label>
-            <input value={tags} onChange={(e) => setTags(e.target.value)} className="input" />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
-            默认选中（调用 Prompt 时自动附加）
-          </label>
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rounded border px-3 py-1.5 text-sm hover:bg-muted">取消</button>
-            <button type="submit" className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90">
-              {editId ? "保存" : "创建"}
+              <X size={16} />
             </button>
           </div>
-        </form>
-      </div>
+        </header>
+
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          {/* 左栏：编辑区 */}
+          <div className="min-h-0 flex-1 overflow-y-auto border-line p-4 max-md:border-b md:border-r">
+            {loading ? (
+              <p className="text-sm text-hint">加载中…</p>
+            ) : (
+              <div className="space-y-4">
+                <Field label="标题" required>
+                  <input
+                    value={state.title}
+                    onChange={(e) => patch("title", e.target.value)}
+                    className="input"
+                    required
+                    placeholder="例如：项目背景 · 大众点评推荐系统"
+                  />
+                </Field>
+
+                <Field label="说明（可选）">
+                  <input
+                    value={state.description}
+                    onChange={(e) => patch("description", e.target.value)}
+                    className="input"
+                    placeholder="一句话描述这条上下文的用途，便于检索"
+                  />
+                </Field>
+
+                <Field label="类型">
+                  <ContextTypeSelect
+                    value={state.type}
+                    onChange={(t) => patch("type", t)}
+                  />
+                </Field>
+
+                <Field label="内容" required>
+                  <textarea
+                    value={state.content}
+                    onChange={(e) => patch("content", e.target.value)}
+                    rows={14}
+                    className="input min-h-[280px] resize-y font-normal leading-relaxed"
+                    required
+                    placeholder="支持 Markdown。提示：用 {{变量名}} 标注待替换字段，会自动识别到右侧。"
+                  />
+                </Field>
+
+                <Field label="变量识别">
+                  <ContextVariableChips content={state.content} />
+                </Field>
+
+                <Field label="标签">
+                  <ContextTagInput
+                    value={state.tags}
+                    onChange={(t) => patch("tags", t)}
+                  />
+                </Field>
+
+                <Field label="触发策略">
+                  <ContextTriggerStrategy
+                    strategy={state.strategy}
+                    onStrategyChange={(s) => patch("strategy", s)}
+                    conditions={state.conditions}
+                    onConditionsChange={(c) => patch("conditions", c)}
+                  />
+                </Field>
+
+                <Field label="作用域">
+                  <ContextScopeSelector
+                    scope={state.scope}
+                    onScopeChange={(s) => patch("scope", s)}
+                    refs={state.scopeRefs}
+                    onRefsChange={(r) => patch("scopeRefs", r)}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+
+          {/* 右栏：元信息 + 预览 */}
+          <div className="min-h-0 overflow-y-auto p-4 md:w-[360px] md:shrink-0">
+            <ContextPreviewPanel
+              contextId={editId}
+              content={state.content}
+              updatedAt={updatedAt}
+            />
+          </div>
+        </div>
+
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-paper px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-line bg-paper px-3 py-1.5 text-sm text-sub hover:bg-soft hover:text-ink"
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            className="rounded bg-moss px-3 py-1.5 text-sm text-paper hover:bg-moss/90"
+          >
+            {editId ? "保存" : "创建"}
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-sub">
+        {label}
+        {required && <span className="text-amber"> *</span>}
+      </label>
+      {children}
     </div>
   );
 }
