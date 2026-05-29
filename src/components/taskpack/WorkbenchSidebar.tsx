@@ -16,6 +16,7 @@ import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { useScenarios } from "@/hooks/useScenarios";
 import { useAdminSession } from "@/admin/useAdminSession";
+import { scoreTaskPack } from "@/services/keywordMatch";
 import { collectSceneSubtree } from "@/services/scenePackHelper";
 import {
   createScenario,
@@ -260,14 +261,8 @@ export function WorkbenchSidebar() {
     if (filterMode === "favorites") list = list.filter((p) => p.isFavorited);
     if (filterMode === "recent")
       list = list.filter((p) => p.lastUsedAt != null);
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.goal?.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q)
-      );
+    if (query.trim()) {
+      list = list.filter((p) => scoreTaskPack(p, query) > 0);
     }
     return new Set(list.map((p) => p.id));
   }, [taskPacks, filterMode, query]);

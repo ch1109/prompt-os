@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { useUI } from "@/store/uiStore";
 import { ContextEditor } from "@/components/context/ContextEditor";
 import { deleteContext, getTriggerStrategy } from "@/db/repos/contextRepo";
+import { scoreContext } from "@/services/keywordMatch";
 import { confirm } from "@/store/confirmStore";
 import { CONTEXT_TYPE_OPTIONS } from "@/components/context/contextTypes";
 import {
@@ -47,17 +48,13 @@ export default function Contexts() {
   );
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const hasQuery = query.trim().length > 0;
     return contexts.filter((c) => {
       if (typeFilter !== "ALL" && c.type !== typeFilter) return false;
       const strategy = getTriggerStrategy(c);
       if (strategyFilter !== "ALL" && strategy !== strategyFilter) return false;
-      if (!q) return true;
-      return (
-        c.title.toLowerCase().includes(q) ||
-        c.content.toLowerCase().includes(q) ||
-        (c.tags ?? []).some((t) => t.toLowerCase().includes(q))
-      );
+      if (!hasQuery) return true;
+      return scoreContext(c, query) > 0;
     });
   }, [contexts, query, typeFilter, strategyFilter]);
 

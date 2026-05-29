@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertCircle, Check, Copy, Layers, Pencil, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { MarkdownView } from "@/components/MarkdownView";
@@ -16,10 +16,14 @@ interface Props {
 
 export function PromptDetail({ onEdit }: Props) {
   const { selectedPromptId, setSelectedPrompt } = useUI();
+  const searchQuery = useUI((s) => s.searchQuery);
   const [copied, setCopied] = useState<"raw" | "filled" | null>(null);
   const [useWithContextOpen, setUseWithContextOpen] = useState(false);
   const [slotOpen, setSlotOpen] = useState(false);
   const [slotValues, setSlotValues] = useState<Record<string, string>>({});
+
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const markRef = useRef<HTMLElement | null>(null);
 
   const p = useLiveQuery(
     () => (selectedPromptId ? db.prompts.get(selectedPromptId) : undefined),
@@ -39,6 +43,47 @@ export function PromptDetail({ onEdit }: Props) {
       setSlotValues({});
     });
   }, [selectedPromptId]);
+
+  // 搜索命中后自动定位到 body 中第一处关键字 + 短暂高亮
+  useEffect(() => {
+    const restore = () => {
+      const mark = markRef.current;
+      markRef.current = null;
+      if (!mark?.parentNode) return;
+      const parent = mark.parentNode;
+      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+      parent.normalize?.();
+    };
+    restore();
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q || !bodyRef.current) return;
+
+    const walker = document.createTreeWalker(bodyRef.current, NodeFilter.SHOW_TEXT);
+    let target: { node: Text; index: number } | null = null;
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const idx = node.data.toLowerCase().indexOf(q);
+      if (idx >= 0) {
+        target = { node, index: idx };
+        break;
+      }
+    }
+    if (!target) return;
+
+    const range = document.createRange();
+    range.setStart(target.node, target.index);
+    range.setEnd(target.node, target.index + q.length);
+
+    const mark = document.createElement("mark");
+    mark.className = "search-highlight";
+    range.surroundContents(mark); // 单文本节点内的 range，不跨元素
+    markRef.current = mark;
+    mark.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    return restore;
+  }, [selectedPromptId, searchQuery, p?.body]);
 
   if (!p) {
     return (
@@ -138,7 +183,10 @@ export function PromptDetail({ onEdit }: Props) {
 
       {/* 正文 */}
       <Field label="正文">
-        <div className="rounded-2xl border border-line/75 bg-canvas/[0.72] px-[18px] py-4 shadow-[inset_0_1px_0_rgb(var(--paper)/0.6)]">
+        <div
+          ref={bodyRef}
+          className="rounded-2xl border border-line/75 bg-canvas/[0.72] px-[18px] py-4 shadow-[inset_0_1px_0_rgb(var(--paper)/0.6)]"
+        >
           <MarkdownView text={prompt.body} />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">

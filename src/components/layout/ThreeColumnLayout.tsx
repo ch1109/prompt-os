@@ -25,7 +25,7 @@ export function ThreeColumnLayout({
 
   return (
     <div className="flex h-full flex-col bg-canvas text-ink">
-      <div className="flex items-center gap-2.5 border-b border-line/80 bg-paper/70 px-3.5 py-2.5 shadow-[0_1px_0_rgb(var(--paper)/0.7)] backdrop-blur-xl md:px-6 md:py-3">
+      <div className="relative z-30 flex items-center gap-2.5 border-b border-line/80 bg-paper/70 px-3.5 py-2.5 shadow-[0_1px_0_rgb(var(--paper)/0.7)] backdrop-blur-xl md:px-6 md:py-3">
         <button
           onClick={() => setMobileSidebarOpen(true)}
           className="rounded-md p-2 text-sub transition hover:bg-soft hover:text-ink md:hidden"

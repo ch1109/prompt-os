@@ -123,6 +123,30 @@ body {
 }
 .detail-enter { animation: slideInRight 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 
+/* 顶部搜索命中后跳到正文位置，amber 闪烁告知用户「在这里」 */
+mark.search-highlight {
+  background: rgb(var(--amber-soft));
+  color: inherit;
+  padding: 1px 3px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgb(var(--amber) / 0.35);
+  animation: search-highlight-pulse 1400ms ease-out 1;
+}
+@keyframes search-highlight-pulse {
+  0%   { background: rgb(var(--amber) / 0.45); }
+  60%  { background: rgb(var(--amber) / 0.25); }
+  100% { background: rgb(var(--amber-soft)); }
+}
+
+/* 顶部下拉里的命中片段标记：静态轻量，多条 mark 同时出现也不闹腾 */
+mark.dropdown-highlight {
+  background: rgb(var(--amber) / 0.18);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
 /* 卡片基础态：无强边框，用浅色把它和画布稍稍区分；hover 仅靠背景与极轻阴影提示 */
 .card-flat {
   background:

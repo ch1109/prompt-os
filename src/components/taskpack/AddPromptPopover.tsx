@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Clipboard, Plus, Search, Sparkles } from "lucide-react";
 import { db } from "@/db";
 import { createPrompt } from "@/db/repos/promptRepo";
+import { scorePrompt } from "@/services/keywordMatch";
 import { toast } from "@/store/toastStore";
 import type { Prompt } from "@/types";
 
@@ -71,20 +72,22 @@ export function AddPromptPopover({
 
   const matches = useMemo<Prompt[]>(() => {
     const existing = new Set(existingPromptIds);
-    const q = query.trim().toLowerCase();
+    const hasQuery = query.trim().length > 0;
     let pool = allPrompts.filter((p) => !existing.has(p.id));
-    if (q) {
-      pool = pool.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.summary?.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
-      );
+    if (hasQuery) {
+      pool = pool.filter((p) => scorePrompt(p, query) > 0);
     }
     pool.sort((a, b) => {
+      // 一级：preferredScene 同场景优先
       const aHit = a.primaryScenario?.[0] === preferredSceneTitle ? 0 : 1;
       const bHit = b.primaryScenario?.[0] === preferredSceneTitle ? 0 : 1;
       if (aHit !== bHit) return aHit - bHit;
+      // 二级：搜索关键字 score（仅有 query 时生效）
+      if (hasQuery) {
+        const ds = scorePrompt(b, query) - scorePrompt(a, query);
+        if (ds !== 0) return ds;
+      }
+      // 三级：updatedAt desc
       return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
     });
     return pool.slice(0, MAX_SUGGESTIONS);

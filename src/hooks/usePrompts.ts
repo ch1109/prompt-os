@@ -2,6 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useMemo, useRef } from "react";
 import { db } from "@/db";
 import { useScenarios } from "@/hooks/useScenarios";
+import { scorePrompt } from "@/services/keywordMatch";
 import { useUI } from "@/store/uiStore";
 import type { Prompt } from "@/types";
 
@@ -82,14 +83,13 @@ export function usePrompts() {
         .filter((p) => order.has(p.id))
         .sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999));
     } else if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      all = all.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.body.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
-      );
+      // 按字段权重打分（title=4 / summary|tags=2 / body=1），按 score desc → updatedAt desc 排序，
+      // 强匹配始终在前；列表页不截断（保留全部命中供后续 chip 筛选）。
+      all = all
+        .map((p) => ({ p, score: scorePrompt(p, searchQuery) }))
+        .filter((s) => s.score > 0)
+        .sort((a, b) => b.score - a.score || b.p.updatedAt - a.p.updatedAt)
+        .map((s) => s.p);
     }
 
     if (filterTaskTypes.length > 0) {

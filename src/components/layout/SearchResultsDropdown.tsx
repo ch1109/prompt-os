@@ -2,7 +2,67 @@ import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FileText, Layers, Database, Sparkles } from "lucide-react";
 import { useUI } from "@/store/uiStore";
+import {
+  scoreContext,
+  scorePrompt,
+  scoreTaskPack,
+  snippetAroundMatch,
+  topKeywordHits,
+} from "@/services/keywordMatch";
 import type { Prompt, TaskPack, Context } from "@/types";
+
+type AssetKind = "prompt" | "taskPack" | "context";
+
+function Subline({
+  item,
+  kind,
+  query,
+  reason,
+}: {
+  item: Prompt | TaskPack | Context;
+  kind: AssetKind;
+  query: string;
+  reason?: string;
+}) {
+  const base = "mt-0.5 block text-[12.5px] text-hint";
+
+  if (reason) {
+    return <span className={`${base} truncate`}>{reason}</span>;
+  }
+
+  const q = query.trim();
+  const titleHit = q && item.title.toLowerCase().includes(q.toLowerCase());
+
+  if (q && !titleHit) {
+    const longText =
+      kind === "prompt"
+        ? (item as Prompt).body
+        : kind === "taskPack"
+          ? (item as TaskPack).description
+          : (item as Context).content;
+    const snippet = snippetAroundMatch(longText ?? "", q);
+    if (snippet) {
+      return (
+        <span className={`${base} line-clamp-2`}>
+          {snippet.before}
+          <mark className="dropdown-highlight">{snippet.match}</mark>
+          {snippet.after}
+        </span>
+      );
+    }
+  }
+
+  // title 命中 / tags-only / goal-only / 无 query：fallback 到原有 summary / taskIntent / goal
+  let fallback = "";
+  if (kind === "prompt") {
+    const p = item as Prompt;
+    fallback = p.summary || p.taskIntent || "";
+  } else if (kind === "taskPack") {
+    fallback = (item as TaskPack).goal || "";
+  }
+  if (!fallback) return null;
+  return <span className={`${base} truncate`}>{fallback}</span>;
+}
 
 interface Props {
   query: string;
@@ -60,39 +120,11 @@ export function SearchResultsDropdown({
         return item ? [{ item, reason: h.reason }] : [];
       });
     } else if (q) {
-      // 关键词命中先按 updatedAt desc 排序再截断，对齐 usePrompts 的展示偏好
-      pHits = allPrompts
-        .filter(
-          (p) =>
-            p.title.toLowerCase().includes(q) ||
-            p.summary.toLowerCase().includes(q) ||
-            p.tags.some((t) => t.toLowerCase().includes(q)) ||
-            p.body.toLowerCase().includes(q)
-        )
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_PER_GROUP)
-        .map((item) => ({ item }));
-      tHits = allTaskPacks
-        .filter(
-          (t) =>
-            t.title.toLowerCase().includes(q) ||
-            t.goal.toLowerCase().includes(q) ||
-            t.description.toLowerCase().includes(q) ||
-            t.tags.some((tag) => tag.toLowerCase().includes(q))
-        )
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_PER_GROUP)
-        .map((item) => ({ item }));
-      cHits = allContexts
-        .filter(
-          (c) =>
-            c.title.toLowerCase().includes(q) ||
-            c.content.toLowerCase().includes(q) ||
-            c.tags.some((tag) => tag.toLowerCase().includes(q))
-        )
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_PER_GROUP)
-        .map((item) => ({ item }));
+      // 关键词命中按字段权重打分：title=4 / summary|goal=2 / tags=2 / body|description|content=1。
+      // 排序 score desc → updatedAt desc，让标题命中始终排在正文命中之前。
+      pHits = topKeywordHits(allPrompts, scorePrompt, query, MAX_PER_GROUP).map((item) => ({ item }));
+      tHits = topKeywordHits(allTaskPacks, scoreTaskPack, query, MAX_PER_GROUP).map((item) => ({ item }));
+      cHits = topKeywordHits(allContexts, scoreContext, query, MAX_PER_GROUP).map((item) => ({ item }));
     }
 
     return { promptHits: pHits, packHits: tHits, contextHits: cHits };
@@ -160,9 +192,7 @@ export function SearchResultsDropdown({
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-moss/50 group-hover:bg-moss" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium text-ink">{item.title}</span>
-                <span className="mt-0.5 block truncate text-[12.5px] text-hint">
-                  {reason || item.summary || item.taskIntent || ""}
-                </span>
+                <Subline item={item} kind="prompt" query={query} reason={reason} />
               </span>
             </button>
           ))}
@@ -184,7 +214,7 @@ export function SearchResultsDropdown({
                 <span className="block truncate text-[14px] font-medium text-ink">
                   {item.title || <span className="italic text-hint">未命名任务包</span>}
                 </span>
-                <span className="mt-0.5 block truncate text-[12.5px] text-hint">{reason || item.goal || ""}</span>
+                <Subline item={item} kind="taskPack" query={query} reason={reason} />
               </span>
             </button>
           ))}
@@ -204,7 +234,7 @@ export function SearchResultsDropdown({
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink/30 group-hover:bg-ink/60" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium text-ink">{item.title}</span>
-                {reason && <span className="mt-0.5 block truncate text-[12.5px] text-hint">{reason}</span>}
+                <Subline item={item} kind="context" query={query} reason={reason} />
               </span>
               <span className="shrink-0 rounded border border-line/70 bg-canvas/60 px-1.5 py-0.5 text-[10.5px] text-hint">
                 {item.type}
