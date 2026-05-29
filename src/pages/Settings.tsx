@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { useSettings, type ThemeMode } from "@/store/settingsStore";
 import { buildRelationGraph } from "@/services/relationBuilder";
-import { exportAllData, importBackupFromFile, type ImportOutcome } from "@/services/backup";
+import {
+  exportAllData,
+  importBackupFromFile,
+  restoreBackupFromFile,
+  type ImportOutcome,
+} from "@/services/backup";
 import { toast } from "@/store/toastStore";
 import { confirm } from "@/store/confirmStore";
 import {
@@ -43,6 +48,7 @@ export default function Settings() {
   const [backupBusy, setBackupBusy] = useState<"idle" | "exporting" | "importing">("idle");
   const [lastImport, setLastImport] = useState<ImportOutcome | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const restoreFileRef = useRef<HTMLInputElement>(null);
 
   const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
   const [snapshotBusy, setSnapshotBusy] = useState<string | "creating" | null>(null);
@@ -110,9 +116,10 @@ export default function Settings() {
     setBackupBusy("exporting");
     try {
       const counts = await exportAllData();
-      const total = counts.prompts + counts.contexts + counts.scenarios + counts.workflows;
+      const total =
+        counts.prompts + counts.contexts + counts.scenarios + counts.taskPacks + counts.workflows;
       toast.success(
-        `已导出 ${total} 条（Prompt ${counts.prompts} · 上下文 ${counts.contexts} · 场景 ${counts.scenarios} · 工作流 ${counts.workflows}）`
+        `已导出 ${total} 条（Prompt ${counts.prompts} · 上下文 ${counts.contexts} · 场景 ${counts.scenarios} · 任务包 ${counts.taskPacks}）`
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "导出失败");
@@ -143,10 +150,39 @@ export default function Settings() {
         outcome.added.prompts +
         outcome.added.contexts +
         outcome.added.scenarios +
+        outcome.added.taskPacks +
         outcome.added.workflows;
       toast.success(`已导入 ${total} 条`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "导入失败");
+    } finally {
+      setBackupBusy("idle");
+    }
+  }
+
+  function pickRestoreFile() {
+    restoreFileRef.current?.click();
+  }
+
+  async function handleRestore(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const ok = await confirm({
+      title: "确认覆盖式导入",
+      message: `将清空本机现有的 Prompt / 上下文 / 场景 / 任务包，替换为文件「${file.name}」的内容（用于设备间精确镜像）。当前数据会自动归档到本地快照，可在下方「本地快照」回滚。`,
+      confirmText: "覆盖导入",
+      danger: true,
+    });
+    if (!ok) return;
+    setBackupBusy("importing");
+    try {
+      const stats = await restoreBackupFromFile(file);
+      setLastImport(null);
+      const total = stats.prompts + stats.contexts + stats.scenarios + stats.taskPacks;
+      toast.success(`已覆盖导入 ${total} 条，刷新页面查看`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "覆盖导入失败");
     } finally {
       setBackupBusy("idle");
     }
@@ -296,7 +332,15 @@ export default function Settings() {
             className="inline-flex items-center gap-1.5 rounded border border-line bg-paper px-3 py-1.5 text-xs text-sub transition-colors hover:border-moss/40 hover:bg-moss-soft hover:text-moss disabled:opacity-40"
           >
             <Upload size={13} strokeWidth={1.7} />
-            {backupBusy === "importing" ? "导入中…" : "导入备份"}
+            {backupBusy === "importing" ? "导入中…" : "导入备份（合并）"}
+          </button>
+          <button
+            onClick={pickRestoreFile}
+            disabled={backupBusy !== "idle"}
+            className="inline-flex items-center gap-1.5 rounded border border-amber/40 bg-paper px-3 py-1.5 text-xs text-amber transition-colors hover:bg-amber-soft disabled:opacity-40"
+          >
+            <RotateCcw size={13} strokeWidth={1.7} />
+            覆盖式导入（设备间镜像）
           </button>
           <input
             ref={fileRef}
@@ -305,17 +349,29 @@ export default function Settings() {
             onChange={handleImport}
             className="hidden"
           />
+          <input
+            ref={restoreFileRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleRestore}
+            className="hidden"
+          />
         </div>
+        <p className="text-xs text-hint">
+          跨设备同步：在<strong className="text-sub">最新编辑的那台</strong>「导出全部数据」，另一台用
+          「覆盖式导入」精确镜像（会清空本机数据，已自动归档可回滚）。两台都编辑再互导会数据分叉。
+        </p>
         {lastImport && (
           <div className="rounded-md border border-line bg-canvas/60 p-2.5 text-xs text-sub">
             <div className="mb-1 text-hint">最近一次导入</div>
             <div className="tabular-nums">
               新增：Prompt {lastImport.added.prompts} · 上下文 {lastImport.added.contexts} · 场景{" "}
-              {lastImport.added.scenarios} · 工作流 {lastImport.added.workflows}
+              {lastImport.added.scenarios} · 任务包 {lastImport.added.taskPacks}
             </div>
             {(lastImport.renamed.prompts ||
               lastImport.renamed.contexts ||
               lastImport.renamed.scenarios ||
+              lastImport.renamed.taskPacks ||
               lastImport.renamed.workflows) > 0 && (
               <div className="mt-0.5 tabular-nums text-hint">
                 因 id 冲突重命名：
@@ -323,6 +379,7 @@ export default function Settings() {
                   ["Prompt", lastImport.renamed.prompts],
                   ["上下文", lastImport.renamed.contexts],
                   ["场景", lastImport.renamed.scenarios],
+                  ["任务包", lastImport.renamed.taskPacks],
                   ["工作流", lastImport.renamed.workflows],
                 ]
                   .filter(([, n]) => (n as number) > 0)
