@@ -50,6 +50,7 @@ function makeScenario(id: string, title = id): Scenario {
     fullPath: [title],
     description: "",
     tags: [],
+    order: 0,
     recommendedPrompts: [],
     recommendedWorkflows: [],
     recommendedContexts: [],
@@ -71,6 +72,7 @@ function makeTaskPack(id: string, sceneCategoryId: string): TaskPack {
     lastUsedAt: null,
     createdAt: now(),
     updatedAt: now(),
+    order: 0,
   };
 }
 

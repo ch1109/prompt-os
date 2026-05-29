@@ -78,7 +78,7 @@ export async function seedDefaultScenarios() {
     return matched.slice(0, 6).map((p) => p.id);
   }
 
-  const scenarios: Scenario[] = sorted.map((key) => {
+  const scenarios: Scenario[] = sorted.map((key, i) => {
     const segs = key.split(SEP);
     const id = nanoid();
     idByPath.set(key, id);
@@ -91,6 +91,7 @@ export async function seedDefaultScenarios() {
       fullPath: segs,
       description: "",
       tags: [],
+      order: i * 10,
       recommendedPrompts: pickRecommendations(segs),
       recommendedWorkflows: [],
       recommendedContexts: [],

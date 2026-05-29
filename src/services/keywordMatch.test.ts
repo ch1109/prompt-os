@@ -59,7 +59,7 @@ function mkContext(over: Partial<Context>): Context {
   return {
     id: "c",
     title: "",
-    type: "用户角色",
+    type: "角色人格",
     content: "",
     tags: [],
     isDefault: false,

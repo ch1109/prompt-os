@@ -20,7 +20,7 @@ export interface AdminSession {
  * 如果 refresh 请求因网络问题永远 pending，getSession() 也会永远 pending（既不 resolve 也不 reject）。
  * 任何依赖外部网络的 await 都必须有超时，否则 UI 会被锁死。
  */
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     p,
     new Promise<T>((_, reject) =>
