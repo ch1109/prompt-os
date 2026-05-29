@@ -100,9 +100,8 @@ interface ParsedBackup {
   exportedAt: number | null;
 }
 
-/** 解析备份/旧模板文件为统一的五表结构，未知格式抛错。merge 与覆盖式恢复共用。 */
-async function parseBackupFile(file: File): Promise<ParsedBackup> {
-  const parsed = JSON.parse(await file.text());
+/** 把已解析的 JSON 归一化为统一的五表结构，未知格式抛错。文件/仓库快照共用。 */
+function normalizeBackup(parsed: unknown): ParsedBackup {
   if (isBackupFile(parsed)) {
     const d = parsed.data;
     return {
@@ -129,6 +128,10 @@ async function parseBackupFile(file: File): Promise<ParsedBackup> {
     };
   }
   throw new Error("无法识别的备份文件格式");
+}
+
+async function parseBackupFile(file: File): Promise<ParsedBackup> {
+  return normalizeBackup(JSON.parse(await file.text()));
 }
 
 export async function importBackupFromFile(file: File): Promise<ImportOutcome> {
@@ -162,15 +165,13 @@ export async function importBackupFromFile(file: File): Promise<ImportOutcome> {
 }
 
 /**
- * 覆盖式恢复：清空本机五表并替换为文件内容，用于设备间精确镜像。
+ * 覆盖式恢复核心：清空本机五表并替换为给定内容，用于设备间精确镜像。
  *
- * 与 importBackupFromFile 的合并模式不同，这里会丢弃本机现有数据——所以清空前
- * 先调用 writeMigrationArchive 把现状归档到 localStorage（可在 Settings 快照列表回滚），
- * 归档失败只 warn 不阻塞，遵循项目「destructive 操作前必先归档」铁律。
+ * 与合并模式不同，这里会丢弃本机现有数据——所以清空前先调用 writeMigrationArchive
+ * 把现状归档到 localStorage（可在 Settings 快照列表回滚），归档失败只 warn 不阻塞，
+ * 遵循项目「destructive 操作前必先归档」铁律。文件导入与仓库快照恢复共用。
  */
-export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
-  const { data } = await parseBackupFile(file);
-
+async function applyRestore(data: BackupFile["data"]): Promise<BackupStats> {
   try {
     const [prompts, scenarios, taskPacks, contexts] = await Promise.all([
       db.prompts.toArray(),
@@ -180,7 +181,7 @@ export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
     ]);
     writeMigrationArchive({ prompts, scenarios, taskPacks, contexts });
   } catch (e) {
-    console.warn("[Prompt OS] 覆盖式导入前归档失败，继续恢复", e);
+    console.warn("[Prompt OS] 覆盖式恢复前归档失败，继续恢复", e);
   }
 
   await db.transaction(
@@ -211,6 +212,32 @@ export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
     taskPacks: data.taskPacks.length,
     workflows: data.workflows.length,
   };
+}
+
+/** 覆盖式导入：从用户选择的文件恢复（离线/不走仓库时使用）。 */
+export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
+  const { data } = await parseBackupFile(file);
+  return applyRestore(data);
+}
+
+/** 仓库快照路径：放在 public/ 下，构建/dev 均由 Vite 在站点根提供。 */
+const REPO_SNAPSHOT_URL = `${import.meta.env.BASE_URL}data-snapshot.json`;
+
+/**
+ * 一键从仓库快照恢复：fetch public/data-snapshot.json → 覆盖恢复。
+ * 用于跨设备同步——B 端 git pull 后无需在文件对话框选文件即可镜像 A 端数据。
+ */
+export async function restoreFromRepoSnapshot(): Promise<{
+  stats: BackupStats;
+  exportedAt: number | null;
+}> {
+  const res = await fetch(REPO_SNAPSHOT_URL, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("仓库里还没有数据快照（public/data-snapshot.json）");
+  }
+  const { data, exportedAt } = normalizeBackup(await res.json());
+  const stats = await applyRestore(data);
+  return { stats, exportedAt };
 }
 
 function isBackupFile(x: unknown): x is BackupFile {

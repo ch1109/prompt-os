@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { db } from "@/db";
 import type { Prompt, TaskPack } from "@/types";
-import { exportAllData, importBackupFromFile, restoreBackupFromFile } from "./backup";
+import {
+  exportAllData,
+  importBackupFromFile,
+  restoreBackupFromFile,
+  restoreFromRepoSnapshot,
+} from "./backup";
 
 // 最小记录：backup 只关心 id 主键与表内容的进出，其余字段不影响读写
 const prompt = (id: string, extra: Partial<Prompt> = {}): Prompt =>
@@ -9,17 +14,20 @@ const prompt = (id: string, extra: Partial<Prompt> = {}): Prompt =>
 const pack = (id: string, extra: Partial<TaskPack> = {}): TaskPack =>
   ({ id, ...extra }) as unknown as TaskPack;
 
-function backupFile(data: {
+type BackupData = {
   prompts?: Prompt[];
   contexts?: unknown[];
   scenarios?: unknown[];
   taskPacks?: TaskPack[];
   workflows?: unknown[];
-}): File {
-  const payload = {
+  exportedAt?: number;
+};
+
+function backupPayload(data: BackupData) {
+  return {
     format: "prompt-os-backup",
     version: 1,
-    exportedAt: Date.now(),
+    exportedAt: data.exportedAt ?? Date.now(),
     counts: {},
     data: {
       prompts: data.prompts ?? [],
@@ -29,7 +37,12 @@ function backupFile(data: {
       workflows: data.workflows ?? [],
     },
   };
-  return new File([JSON.stringify(payload)], "backup.json", { type: "application/json" });
+}
+
+function backupFile(data: BackupData): File {
+  return new File([JSON.stringify(backupPayload(data))], "backup.json", {
+    type: "application/json",
+  });
 }
 
 describe("backup", () => {
@@ -106,5 +119,27 @@ describe("backup", () => {
     const outcome = await importBackupFromFile(backupFile({ taskPacks: [pack("t1")] }));
     expect(outcome.added.taskPacks).toBe(1);
     expect((await db.taskPacks.toArray()).map((p) => p.id)).toEqual(["t1"]);
+  });
+
+  it("restoreFromRepoSnapshot fetch 仓库快照并覆盖恢复", async () => {
+    await db.prompts.add(prompt("factory")); // 模拟 B 端出厂数据，应被替换
+    const at = 1_700_000_000_000;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => backupPayload({ prompts: [prompt("synced")], exportedAt: at }),
+    } as Response);
+
+    const { stats, exportedAt } = await restoreFromRepoSnapshot();
+    expect(stats.prompts).toBe(1);
+    expect(exportedAt).toBe(at);
+    expect((await db.prompts.toArray()).map((p) => p.id)).toEqual(["synced"]); // factory 已清
+
+    vi.restoreAllMocks();
+  });
+
+  it("restoreFromRepoSnapshot 快照不存在时抛友好错误", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 404 } as Response);
+    await expect(restoreFromRepoSnapshot()).rejects.toThrow(/还没有数据快照/);
+    vi.restoreAllMocks();
   });
 });

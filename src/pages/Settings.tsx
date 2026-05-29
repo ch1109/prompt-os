@@ -9,6 +9,7 @@ import {
   Camera,
   Trash2,
   RotateCcw,
+  CloudDownload,
   ShieldCheck,
 } from "lucide-react";
 import { useSettings, type ThemeMode } from "@/store/settingsStore";
@@ -17,6 +18,7 @@ import {
   exportAllData,
   importBackupFromFile,
   restoreBackupFromFile,
+  restoreFromRepoSnapshot,
   type ImportOutcome,
 } from "@/services/backup";
 import { toast } from "@/store/toastStore";
@@ -188,6 +190,29 @@ export default function Settings() {
     }
   }
 
+  async function handleRepoRestore() {
+    const ok = await confirm({
+      title: "从仓库恢复最新数据",
+      message:
+        "将清空本机现有的 Prompt / 上下文 / 场景 / 任务包，替换为仓库快照（public/data-snapshot.json）。当前数据会自动归档到下方「本地快照」，可回滚。",
+      confirmText: "恢复",
+      danger: true,
+    });
+    if (!ok) return;
+    setBackupBusy("importing");
+    try {
+      const { stats, exportedAt } = await restoreFromRepoSnapshot();
+      setLastImport(null);
+      const total = stats.prompts + stats.contexts + stats.scenarios + stats.taskPacks;
+      const when = exportedAt ? `（快照导出于 ${new Date(exportedAt).toLocaleString()}）` : "";
+      toast.success(`已从仓库恢复 ${total} 条${when}，刷新页面查看`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "从仓库恢复失败");
+    } finally {
+      setBackupBusy("idle");
+    }
+  }
+
   async function handleBuildGraph() {
     if (!apiKey) {
       setGraphState({ phase: "error", message: "请先填入 API Key" });
@@ -335,12 +360,20 @@ export default function Settings() {
             {backupBusy === "importing" ? "导入中…" : "导入备份（合并）"}
           </button>
           <button
+            onClick={handleRepoRestore}
+            disabled={backupBusy !== "idle"}
+            className="inline-flex items-center gap-1.5 rounded border border-moss/50 bg-moss-soft px-3 py-1.5 text-xs font-medium text-moss transition-colors hover:bg-moss hover:text-paper disabled:opacity-40"
+          >
+            <CloudDownload size={13} strokeWidth={1.7} />
+            从仓库恢复最新数据
+          </button>
+          <button
             onClick={pickRestoreFile}
             disabled={backupBusy !== "idle"}
             className="inline-flex items-center gap-1.5 rounded border border-amber/40 bg-paper px-3 py-1.5 text-xs text-amber transition-colors hover:bg-amber-soft disabled:opacity-40"
           >
             <RotateCcw size={13} strokeWidth={1.7} />
-            覆盖式导入（设备间镜像）
+            覆盖式导入（选文件）
           </button>
           <input
             ref={fileRef}
@@ -358,8 +391,9 @@ export default function Settings() {
           />
         </div>
         <p className="text-xs text-hint">
-          跨设备同步：在<strong className="text-sub">最新编辑的那台</strong>「导出全部数据」，另一台用
-          「覆盖式导入」精确镜像（会清空本机数据，已自动归档可回滚）。两台都编辑再互导会数据分叉。
+          跨设备同步：在<strong className="text-sub">最新编辑的那台</strong>「导出全部数据」并提交进仓库，
+          另一台 <span className="mono">git pull</span> 后点「从仓库恢复最新数据」即可一键镜像（会清空本机数据，已自动归档可回滚）。
+          两台都编辑再互相恢复会数据分叉。
         </p>
         {lastImport && (
           <div className="rounded-md border border-line bg-canvas/60 p-2.5 text-xs text-sub">
