@@ -4,7 +4,9 @@ import type { Prompt, TaskPack } from "@/types";
 import {
   collectBackup,
   exportAllData,
+  getLocalLatestEdit,
   importBackupFromFile,
+  peekRepoSnapshot,
   restoreBackupFromFile,
   restoreFromRepoSnapshot,
 } from "./backup";
@@ -152,6 +154,35 @@ describe("backup", () => {
   it("restoreFromRepoSnapshot 快照不存在时抛友好错误", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 404 } as Response);
     await expect(restoreFromRepoSnapshot()).rejects.toThrow(/还没有数据快照/);
+    vi.restoreAllMocks();
+  });
+
+  it("getLocalLatestEdit 取三表 updatedAt 最大值，空库为 0", async () => {
+    expect(await getLocalLatestEdit()).toBe(0);
+    await db.prompts.add(prompt("p1", { updatedAt: 100 }));
+    await db.taskPacks.add(pack("t1", { updatedAt: 300 }));
+    await db.prompts.add(prompt("p2", { updatedAt: 200 }));
+    expect(await getLocalLatestEdit()).toBe(300);
+  });
+
+  it("peekRepoSnapshot 只读 exportedAt + counts，不触碰本机数据", async () => {
+    await db.prompts.add(prompt("local")); // 不应被改动
+    const at = 1_700_000_000_000;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => backupPayload({ prompts: [prompt("x"), prompt("y")], exportedAt: at }),
+    } as Response);
+
+    const meta = await peekRepoSnapshot();
+    expect(meta.exportedAt).toBe(at);
+    expect((await db.prompts.toArray()).map((p) => p.id)).toEqual(["local"]); // 未恢复
+
+    vi.restoreAllMocks();
+  });
+
+  it("peekRepoSnapshot 快照不存在时抛友好错误", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 404 } as Response);
+    await expect(peekRepoSnapshot()).rejects.toThrow(/还没有数据快照/);
     vi.restoreAllMocks();
   });
 });

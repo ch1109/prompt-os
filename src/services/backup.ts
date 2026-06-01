@@ -259,6 +259,44 @@ export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
 const REPO_SNAPSHOT_URL = `${import.meta.env.BASE_URL}data-snapshot.json`;
 
 /**
+ * 本机三张可编辑表（prompts/contexts/taskPacks）里最新的 updatedAt。
+ * 用于「从仓库恢复」前判断本机是否有比快照更新的编辑（Scenario 无 updatedAt，故不计；
+ * 空库返回 0）。注意：全新用户 seed 后 updatedAt=seed 时刻，可能晚于历史快照的
+ * exportedAt——这会触发一次中性的「本机更新」提示，用户确认即可，不是误报为患。
+ */
+export async function getLocalLatestEdit(): Promise<number> {
+  const [prompts, contexts, taskPacks] = await Promise.all([
+    db.prompts.toArray(),
+    db.contexts.toArray(),
+    db.taskPacks.toArray(),
+  ]);
+  let max = 0;
+  for (const r of [...prompts, ...contexts, ...taskPacks]) {
+    if (r.updatedAt > max) max = r.updatedAt;
+  }
+  return max;
+}
+
+/**
+ * 只读取仓库快照的元信息（exportedAt + counts），不做任何恢复。
+ * 供恢复前比对时间、提示冲突用，与 restoreFromRepoSnapshot 各自独立 fetch。
+ */
+export async function peekRepoSnapshot(): Promise<{
+  exportedAt: number | null;
+  counts: BackupStats | null;
+}> {
+  const res = await fetch(REPO_SNAPSHOT_URL, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("仓库里还没有数据快照（public/data-snapshot.json）");
+  }
+  const json = await res.json();
+  if (isBackupFile(json)) {
+    return { exportedAt: json.exportedAt, counts: json.counts };
+  }
+  return { exportedAt: null, counts: null };
+}
+
+/**
  * 一键从仓库快照恢复：fetch public/data-snapshot.json → 覆盖恢复。
  * 用于跨设备同步——B 端 git pull 后无需在文件对话框选文件即可镜像 A 端数据。
  */

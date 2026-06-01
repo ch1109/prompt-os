@@ -7,6 +7,7 @@ import {
   Download,
   Upload,
   UploadCloud,
+  Copy,
   Camera,
   Trash2,
   RotateCcw,
@@ -21,6 +22,8 @@ import {
   restoreBackupFromFile,
   restoreFromRepoSnapshot,
   saveSnapshotToRepo,
+  peekRepoSnapshot,
+  getLocalLatestEdit,
   type ImportOutcome,
 } from "@/services/backup";
 import { toast } from "@/store/toastStore";
@@ -40,6 +43,10 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { value: "dark", label: "深色", Icon: Moon },
 ];
 
+/** 保存快照后引导用户提交推送的一行命令（P2 复制按钮与 SOP 文案共用，DRY）。 */
+const GIT_SYNC_CMD =
+  'git add public/data-snapshot.json && git commit -m "data: 同步快照" && git push';
+
 export default function Settings() {
   const { apiKey, model, theme, setApiKey, setModel, setTheme } = useSettings();
   const [saved, setSaved] = useState(false);
@@ -53,6 +60,7 @@ export default function Settings() {
     "idle" | "exporting" | "importing" | "saving"
   >("idle");
   const [lastImport, setLastImport] = useState<ImportOutcome | null>(null);
+  const [savedToRepoAt, setSavedToRepoAt] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const restoreFileRef = useRef<HTMLInputElement>(null);
 
@@ -140,11 +148,21 @@ export default function Settings() {
       const counts = await saveSnapshotToRepo();
       const total =
         counts.prompts + counts.contexts + counts.scenarios + counts.taskPacks + counts.workflows;
-      toast.success(`已写入 public/data-snapshot.json（${total} 条），请提交并推送`);
+      setSavedToRepoAt(Date.now());
+      toast.success(`已写入 public/data-snapshot.json（${total} 条），下一步提交并推送`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "保存到仓库失败");
     } finally {
       setBackupBusy("idle");
+    }
+  }
+
+  async function handleCopyGitCmd() {
+    try {
+      await navigator.clipboard.writeText(GIT_SYNC_CMD);
+      toast.success("已复制 git 命令，去终端粘贴执行");
+    } catch {
+      toast.error("复制失败，请手动选中下方命令复制");
     }
   }
 
@@ -209,10 +227,24 @@ export default function Settings() {
   }
 
   async function handleRepoRestore() {
+    // 恢复前先 peek 仓库快照导出时间，与本机最新编辑比对——本机更新时升级为强警告，
+    // 防止「本机有新编辑却被更旧的仓库快照覆盖」导致编辑丢失（last-writer-wins 防呆）。
+    let repoAt: number;
+    try {
+      const meta = await peekRepoSnapshot();
+      repoAt = meta.exportedAt ?? 0;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "读取仓库快照失败");
+      return;
+    }
+    const localLatest = await getLocalLatestEdit();
+    const localNewer = repoAt > 0 && localLatest > repoAt;
+
     const ok = await confirm({
-      title: "从仓库恢复最新数据",
-      message:
-        "将清空本机现有的 Prompt / 上下文 / 场景 / 任务包，替换为仓库快照（public/data-snapshot.json）。当前数据会自动归档到下方「本地快照」，可回滚。",
+      title: localNewer ? "⚠️ 本机数据似乎比仓库快照新" : "从仓库恢复最新数据",
+      message: localNewer
+        ? `本机存在比仓库快照更新的数据（本机最近编辑 ${formatRelative(localLatest)}，仓库快照导出于 ${formatRelative(repoAt)}）。恢复会清空本机数据、丢失这些更新。\n\n· 若本机只是出厂初始数据，可放心继续；\n· 若你在本机有新编辑，请先点上方「保存快照到仓库」再恢复。\n\n确定恢复吗？`
+        : `将清空本机现有的 Prompt / 上下文 / 场景 / 任务包，替换为仓库快照（导出于 ${formatRelative(repoAt)}）。当前数据会自动归档到下方「本地快照」，可回滚。`,
       confirmText: "恢复",
       danger: true,
     });
@@ -419,6 +451,14 @@ export default function Settings() {
             className="hidden"
           />
         </div>
+        {import.meta.env.DEV && savedToRepoAt && (
+          <div className="flex items-center gap-2 rounded-md border border-moss/40 bg-moss-soft/50 px-3 py-2 text-xs text-moss">
+            <UploadCloud size={13} strokeWidth={1.7} className="shrink-0" />
+            <span>
+              已于 {formatRelative(savedToRepoAt)} 写入仓库快照，下一步执行下方 git 命令提交并推送 ↓
+            </span>
+          </div>
+        )}
         <div className="space-y-1.5 rounded-md border border-line bg-canvas/40 p-3 text-xs text-hint">
           <p className="font-medium text-sub">跨设备同步（last-writer-wins，勿两台同时编辑）</p>
           <p>
@@ -427,9 +467,19 @@ export default function Settings() {
             <strong className="text-moss">「保存快照到仓库」</strong>
             直接写入 public/data-snapshot.json，再执行：
           </p>
-          <code className="block select-all rounded bg-soft px-2 py-1 font-mono text-[11px] text-ink">
-            git add public/data-snapshot.json && git commit -m "data: 同步快照" && git push
-          </code>
+          <div className="flex items-stretch gap-1.5">
+            <code className="block flex-1 select-all rounded bg-soft px-2 py-1 font-mono text-[11px] leading-relaxed text-ink">
+              {GIT_SYNC_CMD}
+            </code>
+            <button
+              onClick={handleCopyGitCmd}
+              title="复制 git 命令"
+              className="inline-flex shrink-0 items-center gap-1 rounded border border-line bg-paper px-2 text-[11px] text-sub transition-colors hover:border-moss/40 hover:text-moss"
+            >
+              <Copy size={12} strokeWidth={1.7} />
+              复制
+            </button>
+          </div>
           <p>
             <strong className="text-sub">B 台（接收端）</strong>：
             <span className="mono">git pull</span> 后点
