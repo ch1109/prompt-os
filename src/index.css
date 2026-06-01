@@ -123,6 +123,12 @@ body {
 }
 .detail-enter { animation: slideInRight 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 
+/* 全局同步状态横幅：从顶部轻轻压入，提示而不突兀 */
+@keyframes sync-banner-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
 /* 顶部搜索命中后跳到正文位置，amber 闪烁告知用户「在这里」 */
 mark.search-highlight {
   background: rgb(var(--amber-soft));

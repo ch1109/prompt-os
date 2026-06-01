@@ -5,6 +5,34 @@ import type { Context, Prompt, Scenario, TaskPack, Workflow } from "@/types";
 
 const BACKUP_VERSION = 1;
 
+/**
+ * 同步锚点：记录「本机当前镜像的是哪一份仓库快照」的 exportedAt。
+ *
+ * 为什么需要它：判断同步方向不能只靠 `max(updatedAt)`——seed 会把出厂数据的
+ * updatedAt 设成灌库时刻，一台刚 pull 完的 B 台会显得「本机有新编辑」，从而诱导
+ * 用户把出厂数据推回仓库覆盖真实快照。锚点让我们区分「本机真实编辑过」与
+ * 「只是 seed 时间晚于快照」：只有保存/恢复显式发生后锚点才写入，方向判断才可信。
+ */
+const SYNC_ANCHOR_KEY = "prompt-os-sync-anchor";
+
+function getSyncAnchor(): number | null {
+  try {
+    const raw = localStorage.getItem(SYNC_ANCHOR_KEY);
+    return raw ? Number(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setSyncAnchor(exportedAt: number | null): void {
+  try {
+    if (exportedAt == null) localStorage.removeItem(SYNC_ANCHOR_KEY);
+    else localStorage.setItem(SYNC_ANCHOR_KEY, String(exportedAt));
+  } catch (e) {
+    console.warn("[Prompt OS] 写入同步锚点失败", e);
+  }
+}
+
 interface BackupFile {
   format: "prompt-os-backup";
   version: number;
@@ -84,7 +112,10 @@ const SAVE_SNAPSHOT_URL = "/__save-snapshot";
  * 文件名与路径都由中间件写死、不会出错。写盘后仍需你手动 `git commit && push`——
  * push 是不可逆的外发操作，有意保留人工确认，本函数绝不自动提交。
  */
-export async function saveSnapshotToRepo(): Promise<BackupStats> {
+export async function saveSnapshotToRepo(): Promise<{
+  counts: BackupStats;
+  exportedAt: number;
+}> {
   const file = await collectBackup();
   const res = await fetch(SAVE_SNAPSHOT_URL, {
     method: "POST",
@@ -98,7 +129,29 @@ export async function saveSnapshotToRepo(): Promise<BackupStats> {
         : `写入仓库快照失败（HTTP ${res.status}）`
     );
   }
-  return file.counts;
+  // 本机刚把自己推上仓库 → 本机即与这份快照同步，落锚点供后续方向判断。
+  setSyncAnchor(file.exportedAt);
+  return { counts: file.counts, exportedAt: file.exportedAt };
+}
+
+export interface SnapshotGitState {
+  state: "uncommitted" | "unpushed" | "no-upstream" | "synced" | "error";
+  detail: string;
+}
+
+/**
+ * 只读探测仓库快照的 git 状态（dev only，端点见 vite.config.ts）。
+ * 生产构建无此端点——返回 null，调用方据此不显示 git 维度信息。
+ */
+export async function peekSnapshotGitState(): Promise<SnapshotGitState | null> {
+  if (!import.meta.env.DEV) return null;
+  try {
+    const res = await fetch("/__snapshot-git-status", { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as SnapshotGitState;
+  } catch {
+    return null;
+  }
 }
 
 export interface ImportOutcome {
@@ -251,8 +304,12 @@ async function applyRestore(data: BackupFile["data"]): Promise<BackupStats> {
 
 /** 覆盖式导入：从用户选择的文件恢复（离线/不走仓库时使用）。 */
 export async function restoreBackupFromFile(file: File): Promise<BackupStats> {
-  const { data } = await parseBackupFile(file);
-  return applyRestore(data);
+  const { data, exportedAt } = await parseBackupFile(file);
+  const stats = await applyRestore(data);
+  // 本机现镜像这份文件 → 落锚点（legacy 模板无 exportedAt 时置空，回到中性 unknown，
+  // 不残留旧锚点误判方向）。
+  setSyncAnchor(exportedAt);
+  return stats;
 }
 
 /** 仓库快照路径：放在 public/ 下，构建/dev 均由 Vite 在站点根提供。 */
@@ -310,7 +367,61 @@ export async function restoreFromRepoSnapshot(): Promise<{
   }
   const { data, exportedAt } = normalizeBackup(await res.json());
   const stats = await applyRestore(data);
+  // 本机已镜像这份仓库快照 → 落锚点，后续方向判断以此为基准。
+  setSyncAnchor(exportedAt);
   return { stats, exportedAt };
+}
+
+/**
+ * 同步状态机：组合「仓库快照 exportedAt」「本机锚点」「本机最近编辑」三者判定方向。
+ *
+ * - `no-snapshot`：仓库还没有快照文件。
+ * - `unknown`：**锚点为空**——本机从未显式保存/恢复过。此时时间戳无法区分
+ *   「带 seed 的新 B 台」和「有真实编辑的 A 台」，故为中性态，UI 不做方向诱导。
+ * - `repo-newer`：锚点存在且仓库快照比锚点新 → B 台应「从仓库恢复」。
+ * - `local-newer`：锚点存在、本机编辑晚于锚点、且仓库未更新 → A 台应「保存+推送」。
+ * - `conflict`：锚点存在、仓库已更新 **且** 本机也有新编辑 → 两台并发改动。
+ * - `in-sync`：其余（本机与仓库一致）。
+ */
+export type SyncState =
+  | "no-snapshot"
+  | "unknown"
+  | "repo-newer"
+  | "local-newer"
+  | "conflict"
+  | "in-sync";
+
+export interface SyncStatus {
+  state: SyncState;
+  repoAt: number | null;
+  localAt: number;
+  anchor: number | null;
+  counts: BackupStats | null;
+}
+
+export async function getSyncStatus(): Promise<SyncStatus> {
+  const anchor = getSyncAnchor();
+  const localAt = await getLocalLatestEdit();
+
+  let repoAt: number | null;
+  let counts: BackupStats | null;
+  try {
+    const meta = await peekRepoSnapshot();
+    repoAt = meta.exportedAt;
+    counts = meta.counts;
+  } catch {
+    return { state: "no-snapshot", repoAt: null, localAt, anchor, counts: null };
+  }
+
+  const base = { repoAt, localAt, anchor, counts };
+  if (anchor == null || repoAt == null) return { ...base, state: "unknown" };
+
+  const repoNewer = repoAt > anchor;
+  const localNewer = localAt > anchor;
+  if (repoNewer && localNewer) return { ...base, state: "conflict" };
+  if (repoNewer) return { ...base, state: "repo-newer" };
+  if (localNewer) return { ...base, state: "local-newer" };
+  return { ...base, state: "in-sync" };
 }
 
 function isBackupFile(x: unknown): x is BackupFile {

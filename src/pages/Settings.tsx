@@ -20,12 +20,15 @@ import {
   exportAllData,
   importBackupFromFile,
   restoreBackupFromFile,
-  restoreFromRepoSnapshot,
-  saveSnapshotToRepo,
-  peekRepoSnapshot,
-  getLocalLatestEdit,
+  getSyncStatus,
+  peekSnapshotGitState,
   type ImportOutcome,
+  type SyncStatus,
+  type SyncState,
+  type SnapshotGitState,
 } from "@/services/backup";
+import { runSaveToRepo, runRepoRestore } from "@/services/syncActions";
+import { formatRelative } from "@/utils/formatRelative";
 import { toast } from "@/store/toastStore";
 import { confirm } from "@/store/confirmStore";
 import {
@@ -47,6 +50,22 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
 const GIT_SYNC_CMD =
   'git add public/data-snapshot.json && git commit -m "data: 同步快照" && git push';
 
+/** 同步状态 → 状态卡片的文案与配色（moss=正常/提示，amber=需注意，info=中性）。 */
+const SYNC_META: Record<SyncState, { label: string; tone: "moss" | "amber" | "info" }> = {
+  "in-sync": { label: "本机与仓库已同步", tone: "moss" },
+  "repo-newer": { label: "仓库有更新，建议从仓库恢复", tone: "moss" },
+  "local-newer": { label: "本机有未同步的编辑，建议保存到仓库", tone: "amber" },
+  conflict: { label: "两台都改过，请谨慎选择同步方向", tone: "amber" },
+  unknown: { label: "首次同步：请确认方向后再操作", tone: "info" },
+  "no-snapshot": { label: "仓库还没有数据快照", tone: "info" },
+};
+
+const SYNC_CARD_TONE: Record<"moss" | "amber" | "info", string> = {
+  moss: "border-moss/40 bg-moss-soft/40 text-moss",
+  amber: "border-amber/40 bg-amber-soft/40 text-amber",
+  info: "border-line bg-canvas/50 text-sub",
+};
+
 export default function Settings() {
   const { apiKey, model, theme, setApiKey, setModel, setTheme } = useSettings();
   const [saved, setSaved] = useState(false);
@@ -66,9 +85,21 @@ export default function Settings() {
 
   const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
   const [snapshotBusy, setSnapshotBusy] = useState<string | "creating" | null>(null);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
+  const [gitState, setGitState] = useState<SnapshotGitState | null>(null);
+
+  async function refreshSync() {
+    const [s, g] = await Promise.all([
+      getSyncStatus().catch(() => null),
+      peekSnapshotGitState().catch(() => null),
+    ]);
+    setSync(s);
+    setGitState(g);
+  }
 
   useEffect(() => {
     setSnapshots(listSnapshots());
+    void refreshSync();
   }, []);
 
   async function handleCreateSnapshot() {
@@ -144,17 +175,12 @@ export default function Settings() {
 
   async function handleSaveToRepo() {
     setBackupBusy("saving");
-    try {
-      const counts = await saveSnapshotToRepo();
-      const total =
-        counts.prompts + counts.contexts + counts.scenarios + counts.taskPacks + counts.workflows;
+    const ok = await runSaveToRepo();
+    if (ok) {
       setSavedToRepoAt(Date.now());
-      toast.success(`已写入 public/data-snapshot.json（${total} 条），下一步提交并推送`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "保存到仓库失败");
-    } finally {
-      setBackupBusy("idle");
+      await refreshSync();
     }
+    setBackupBusy("idle");
   }
 
   async function handleCopyGitCmd() {
@@ -227,40 +253,13 @@ export default function Settings() {
   }
 
   async function handleRepoRestore() {
-    // 恢复前先 peek 仓库快照导出时间，与本机最新编辑比对——本机更新时升级为强警告，
-    // 防止「本机有新编辑却被更旧的仓库快照覆盖」导致编辑丢失（last-writer-wins 防呆）。
-    let repoAt: number;
-    try {
-      const meta = await peekRepoSnapshot();
-      repoAt = meta.exportedAt ?? 0;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "读取仓库快照失败");
-      return;
-    }
-    const localLatest = await getLocalLatestEdit();
-    const localNewer = repoAt > 0 && localLatest > repoAt;
-
-    const ok = await confirm({
-      title: localNewer ? "⚠️ 本机数据似乎比仓库快照新" : "从仓库恢复最新数据",
-      message: localNewer
-        ? `本机存在比仓库快照更新的数据（本机最近编辑 ${formatRelative(localLatest)}，仓库快照导出于 ${formatRelative(repoAt)}）。恢复会清空本机数据、丢失这些更新。\n\n· 若本机只是出厂初始数据，可放心继续；\n· 若你在本机有新编辑，请先点上方「保存快照到仓库」再恢复。\n\n确定恢复吗？`
-        : `将清空本机现有的 Prompt / 上下文 / 场景 / 任务包，替换为仓库快照（导出于 ${formatRelative(repoAt)}）。当前数据会自动归档到下方「本地快照」，可回滚。`,
-      confirmText: "恢复",
-      danger: true,
-    });
-    if (!ok) return;
     setBackupBusy("importing");
-    try {
-      const { stats, exportedAt } = await restoreFromRepoSnapshot();
+    const ok = await runRepoRestore();
+    if (ok) {
       setLastImport(null);
-      const total = stats.prompts + stats.contexts + stats.scenarios + stats.taskPacks;
-      const when = exportedAt ? `（快照导出于 ${new Date(exportedAt).toLocaleString()}）` : "";
-      toast.success(`已从仓库恢复 ${total} 条${when}，刷新页面查看`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "从仓库恢复失败");
-    } finally {
-      setBackupBusy("idle");
+      await refreshSync();
     }
+    setBackupBusy("idle");
   }
 
   async function handleBuildGraph() {
@@ -392,6 +391,26 @@ export default function Settings() {
         <p className="text-xs text-hint">
           所有数据存储在浏览器 IndexedDB。建议定期导出备份；换浏览器、清缓存或换设备时再导入恢复。
         </p>
+        {sync &&
+          (() => {
+            // git「快照已写盘未 commit」必须盖过时间戳的「已同步」——否则保存后卡片头条
+            // 显示「已同步」会让用户误以为搬运完成、忘了 commit/push，B 台拉到旧快照。
+            const pendingCommit = import.meta.env.DEV && gitState?.state === "uncommitted";
+            const meta = pendingCommit
+              ? { label: "快照已保存，待提交并推送（见下方 git 命令）", tone: "amber" as const }
+              : SYNC_META[sync.state];
+            return (
+              <div className={`rounded-md border px-3 py-2.5 text-xs ${SYNC_CARD_TONE[meta.tone]}`}>
+                <p className="font-medium">同步状态 · {meta.label}</p>
+                <p className="mt-1 text-hint tabular-nums">
+                  仓库快照 {sync.repoAt ? formatRelative(sync.repoAt) : "无"} · 本机最近编辑{" "}
+                  {sync.localAt ? formatRelative(sync.localAt) : "无"} · 已镜像{" "}
+                  {sync.anchor ? formatRelative(sync.anchor) : "（尚未保存/恢复过）"}
+                  {import.meta.env.DEV && gitState ? ` · git：${gitState.detail}` : ""}
+                </p>
+              </div>
+            );
+          })()}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleExport}
@@ -591,23 +610,6 @@ export default function Settings() {
       </div>
     </div>
   );
-}
-
-function formatRelative(ts: number): string {
-  const d = new Date(ts);
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "刚刚";
-  if (mins < 60) return `${mins} 分钟前`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} 天前`;
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 function formatBytes(n: number): string {

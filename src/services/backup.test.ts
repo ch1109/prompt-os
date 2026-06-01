@@ -1,15 +1,27 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { db } from "@/db";
 import type { Prompt, TaskPack } from "@/types";
 import {
   collectBackup,
   exportAllData,
   getLocalLatestEdit,
+  getSyncStatus,
   importBackupFromFile,
   peekRepoSnapshot,
   restoreBackupFromFile,
   restoreFromRepoSnapshot,
 } from "./backup";
+
+const ANCHOR_KEY = "prompt-os-sync-anchor";
+
+/** 让 getSyncStatus 里的 peekRepoSnapshot 拿到指定 exportedAt 的仓库快照（404 → 模拟无快照）。 */
+function mockRepoSnapshot(exportedAt: number | null) {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    exportedAt == null
+      ? ({ ok: false, status: 404 } as Response)
+      : ({ ok: true, json: async () => backupPayload({ exportedAt }) } as Response)
+  );
+}
 
 // 最小记录：backup 只关心 id 主键与表内容的进出，其余字段不影响读写
 const prompt = (id: string, extra: Partial<Prompt> = {}): Prompt =>
@@ -184,5 +196,62 @@ describe("backup", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 404 } as Response);
     await expect(peekRepoSnapshot()).rejects.toThrow(/还没有数据快照/);
     vi.restoreAllMocks();
+  });
+});
+
+describe("getSyncStatus", () => {
+  beforeEach(async () => {
+    await Promise.all([db.prompts.clear(), db.taskPacks.clear(), db.contexts.clear()]);
+    localStorage.clear();
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("【致命陷阱】锚点为空 + 本机 seed 时间晚于仓库快照 → unknown，绝不误判 local-newer", async () => {
+    // 模拟刚 pull 完的 B 台：seed 把出厂数据 updatedAt 设成「今天」，晚于历史快照
+    await db.prompts.add(prompt("seeded", { updatedAt: 9_999_999 }));
+    mockRepoSnapshot(1_000); // 仓库快照很旧
+    // 锚点为空（从未保存/恢复过）
+
+    const s = await getSyncStatus();
+    expect(s.state).toBe("unknown"); // 必须中性，若判成 local-newer 会诱导推 seed 覆盖真快照
+  });
+
+  it("锚点存在、仓库快照比锚点新 → repo-newer（B 台该恢复）", async () => {
+    localStorage.setItem(ANCHOR_KEY, "1000");
+    await db.prompts.add(prompt("p", { updatedAt: 500 })); // 本机编辑不晚于锚点
+    mockRepoSnapshot(2000);
+
+    expect((await getSyncStatus()).state).toBe("repo-newer");
+  });
+
+  it("锚点存在、本机编辑晚于锚点、仓库未更新 → local-newer（A 台该保存）", async () => {
+    localStorage.setItem(ANCHOR_KEY, "1000");
+    await db.prompts.add(prompt("p", { updatedAt: 2000 }));
+    mockRepoSnapshot(1000); // 仓库 == 锚点，未更新
+
+    expect((await getSyncStatus()).state).toBe("local-newer");
+  });
+
+  it("锚点存在、仓库与本机都晚于锚点 → conflict", async () => {
+    localStorage.setItem(ANCHOR_KEY, "1000");
+    await db.prompts.add(prompt("p", { updatedAt: 3000 }));
+    mockRepoSnapshot(2000);
+
+    expect((await getSyncStatus()).state).toBe("conflict");
+  });
+
+  it("锚点存在、两边都不晚于锚点 → in-sync", async () => {
+    localStorage.setItem(ANCHOR_KEY, "1000");
+    await db.prompts.add(prompt("p", { updatedAt: 800 }));
+    mockRepoSnapshot(1000);
+
+    expect((await getSyncStatus()).state).toBe("in-sync");
+  });
+
+  it("仓库无快照 → no-snapshot", async () => {
+    localStorage.setItem(ANCHOR_KEY, "1000");
+    mockRepoSnapshot(null);
+
+    expect((await getSyncStatus()).state).toBe("no-snapshot");
   });
 });

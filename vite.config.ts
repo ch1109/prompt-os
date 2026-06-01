@@ -2,7 +2,31 @@ import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "path";
+
+/**
+ * 只读探测仓库快照的 git 同步状态，供 dev 横幅如实显示「已保存未 commit / 未 push」。
+ * 全部用 execFileSync（参数数组，无 shell 注入面），且只跑 status/rev-list 只读命令。
+ */
+function readSnapshotGitState(): { state: string; detail: string } {
+  const run = (args: string[]) =>
+    execFileSync("git", args, { cwd: __dirname, encoding: "utf8" }).trim();
+  try {
+    const dirty = run(["status", "--porcelain", "--", "public/data-snapshot.json"]);
+    if (dirty) return { state: "uncommitted", detail: "快照已保存到磁盘，但尚未 commit" };
+    // 已提交：再看本地分支是否领先 upstream（无 upstream 时 rev-list 会抛错）
+    try {
+      const ahead = run(["rev-list", "--count", "@{upstream}..HEAD"]);
+      if (Number(ahead) > 0) return { state: "unpushed", detail: `本地有 ${ahead} 个提交未 push` };
+      return { state: "synced", detail: "快照已提交并推送" };
+    } catch {
+      return { state: "no-upstream", detail: "当前分支未设置 upstream，无法判断是否已推送" };
+    }
+  } catch (e) {
+    return { state: "error", detail: String(e) };
+  }
+}
 
 /**
  * dev 专用：把 Settings「保存快照到仓库」POST 过来的备份直接写进
@@ -35,6 +59,14 @@ function snapshotWriter(): Plugin {
             res.end(JSON.stringify({ ok: false, error: String(e) }));
           }
         });
+      });
+
+      // 只读 git 状态：横幅/设置卡片据此显示「已保存未 commit / 未 push」。
+      server.middlewares.use("/__snapshot-git-status", (req, res, next) => {
+        if (req.method !== "GET") return next();
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(readSnapshotGitState()));
       });
     },
   };

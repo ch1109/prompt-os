@@ -7,6 +7,7 @@ import { ThemeManager } from "@/components/ThemeManager";
 import { CommandPalette } from "@/components/CommandPalette";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { WorkbenchActions } from "@/components/layout/WorkbenchActions";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
 
 const NAV = [
   { to: "/", label: "工作台" },
@@ -109,6 +110,7 @@ export default function App() {
         </div>
       )}
 
+      <SyncStatusBanner />
       <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
