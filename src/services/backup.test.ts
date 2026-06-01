@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { db } from "@/db";
 import type { Prompt, TaskPack } from "@/types";
 import {
+  collectBackup,
   exportAllData,
   importBackupFromFile,
   restoreBackupFromFile,
@@ -55,6 +56,17 @@ describe("backup", () => {
       db.workflows.clear(),
     ]);
     localStorage.clear();
+  });
+
+  it("collectBackup 的 counts 与五表实际长度一致", async () => {
+    await db.prompts.bulkAdd([prompt("p1"), prompt("p2")]);
+    await db.taskPacks.add(pack("t1"));
+
+    const file = await collectBackup();
+    expect(file.counts.prompts).toBe(2);
+    expect(file.counts.taskPacks).toBe(1);
+    expect(file.counts.contexts).toBe(0);
+    expect(file.data.prompts.map((p) => p.id).sort()).toEqual(["p1", "p2"]);
   });
 
   it("exportAllData 含 taskPacks（修复前漏导出）", async () => {

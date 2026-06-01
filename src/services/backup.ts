@@ -33,7 +33,11 @@ export interface BackupStats {
   workflows: number;
 }
 
-export async function exportAllData(): Promise<BackupStats> {
+/**
+ * 读取五张活跃表并组装成统一的 BackupFile 结构。
+ * 导出下载（exportAllData）与「保存到仓库」（saveSnapshotToRepo）共用同一份采集逻辑。
+ */
+export async function collectBackup(): Promise<BackupFile> {
   const [prompts, contexts, scenarios, taskPacks, workflows] = await Promise.all([
     db.prompts.toArray(),
     db.contexts.toArray(),
@@ -41,20 +45,23 @@ export async function exportAllData(): Promise<BackupStats> {
     db.taskPacks.toArray(),
     db.workflows.toArray(),
   ]);
-  const counts = {
-    prompts: prompts.length,
-    contexts: contexts.length,
-    scenarios: scenarios.length,
-    taskPacks: taskPacks.length,
-    workflows: workflows.length,
-  };
-  const file: BackupFile = {
+  return {
     format: "prompt-os-backup",
     version: BACKUP_VERSION,
     exportedAt: Date.now(),
-    counts,
+    counts: {
+      prompts: prompts.length,
+      contexts: contexts.length,
+      scenarios: scenarios.length,
+      taskPacks: taskPacks.length,
+      workflows: workflows.length,
+    },
     data: { prompts, contexts, scenarios, taskPacks, workflows },
   };
+}
+
+export async function exportAllData(): Promise<BackupStats> {
+  const file = await collectBackup();
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const date = new Date().toISOString().slice(0, 10);
@@ -63,7 +70,35 @@ export async function exportAllData(): Promise<BackupStats> {
     download: `prompt-os-backup-${date}.json`,
   }).click();
   URL.revokeObjectURL(url);
-  return counts;
+  return file.counts;
+}
+
+/** dev 中间件落盘端点，实现见 vite.config.ts 的 snapshotWriter 插件。 */
+const SAVE_SNAPSHOT_URL = "/__save-snapshot";
+
+/**
+ * 一键把当前 IndexedDB 五表写入仓库快照 public/data-snapshot.json。
+ *
+ * 仅在 `pnpm dev` 下可用——靠 Vite dev 中间件落盘，生产构建无此端点（端点缺失会 404）。
+ * 设计意图：消除「导出文件落 Downloads → 手动改名搬进 public/」这个最易断的环节，
+ * 文件名与路径都由中间件写死、不会出错。写盘后仍需你手动 `git commit && push`——
+ * push 是不可逆的外发操作，有意保留人工确认，本函数绝不自动提交。
+ */
+export async function saveSnapshotToRepo(): Promise<BackupStats> {
+  const file = await collectBackup();
+  const res = await fetch(SAVE_SNAPSHOT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(file, null, 2),
+  });
+  if (!res.ok) {
+    throw new Error(
+      res.status === 404
+        ? "写盘端点不可用：请确认在 pnpm dev 下操作（生产构建无法写入仓库）"
+        : `写入仓库快照失败（HTTP ${res.status}）`
+    );
+  }
+  return file.counts;
 }
 
 export interface ImportOutcome {

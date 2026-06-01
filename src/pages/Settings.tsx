@@ -6,6 +6,7 @@ import {
   Moon,
   Download,
   Upload,
+  UploadCloud,
   Camera,
   Trash2,
   RotateCcw,
@@ -19,6 +20,7 @@ import {
   importBackupFromFile,
   restoreBackupFromFile,
   restoreFromRepoSnapshot,
+  saveSnapshotToRepo,
   type ImportOutcome,
 } from "@/services/backup";
 import { toast } from "@/store/toastStore";
@@ -47,7 +49,9 @@ export default function Settings() {
     | { phase: "done"; updated: number; groups: number }
     | { phase: "error"; message: string }
   >({ phase: "idle" });
-  const [backupBusy, setBackupBusy] = useState<"idle" | "exporting" | "importing">("idle");
+  const [backupBusy, setBackupBusy] = useState<
+    "idle" | "exporting" | "importing" | "saving"
+  >("idle");
   const [lastImport, setLastImport] = useState<ImportOutcome | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const restoreFileRef = useRef<HTMLInputElement>(null);
@@ -125,6 +129,20 @@ export default function Settings() {
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "导出失败");
+    } finally {
+      setBackupBusy("idle");
+    }
+  }
+
+  async function handleSaveToRepo() {
+    setBackupBusy("saving");
+    try {
+      const counts = await saveSnapshotToRepo();
+      const total =
+        counts.prompts + counts.contexts + counts.scenarios + counts.taskPacks + counts.workflows;
+      toast.success(`已写入 public/data-snapshot.json（${total} 条），请提交并推送`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "保存到仓库失败");
     } finally {
       setBackupBusy("idle");
     }
@@ -351,6 +369,17 @@ export default function Settings() {
             <Download size={13} strokeWidth={1.7} />
             {backupBusy === "exporting" ? "导出中…" : "导出全部数据"}
           </button>
+          {import.meta.env.DEV && (
+            <button
+              onClick={handleSaveToRepo}
+              disabled={backupBusy !== "idle"}
+              title="仅 dev 可用：直接写入 public/data-snapshot.json，省去手动改名搬运"
+              className="inline-flex items-center gap-1.5 rounded border border-moss/50 bg-moss-soft px-3 py-1.5 text-xs font-medium text-moss transition-colors hover:bg-moss hover:text-paper disabled:opacity-40"
+            >
+              <UploadCloud size={13} strokeWidth={1.7} />
+              {backupBusy === "saving" ? "写入中…" : "保存快照到仓库"}
+            </button>
+          )}
           <button
             onClick={pickImportFile}
             disabled={backupBusy !== "idle"}
@@ -390,11 +419,24 @@ export default function Settings() {
             className="hidden"
           />
         </div>
-        <p className="text-xs text-hint">
-          跨设备同步：在<strong className="text-sub">最新编辑的那台</strong>「导出全部数据」并提交进仓库，
-          另一台 <span className="mono">git pull</span> 后点「从仓库恢复最新数据」即可一键镜像（会清空本机数据，已自动归档可回滚）。
-          两台都编辑再互相恢复会数据分叉。
-        </p>
+        <div className="space-y-1.5 rounded-md border border-line bg-canvas/40 p-3 text-xs text-hint">
+          <p className="font-medium text-sub">跨设备同步（last-writer-wins，勿两台同时编辑）</p>
+          <p>
+            <strong className="text-sub">A 台（编辑端 · dev）</strong>
+            ：编辑完点上方
+            <strong className="text-moss">「保存快照到仓库」</strong>
+            直接写入 public/data-snapshot.json，再执行：
+          </p>
+          <code className="block select-all rounded bg-soft px-2 py-1 font-mono text-[11px] text-ink">
+            git add public/data-snapshot.json && git commit -m "data: 同步快照" && git push
+          </code>
+          <p>
+            <strong className="text-sub">B 台（接收端）</strong>：
+            <span className="mono">git pull</span> 后点
+            <strong className="text-moss">「从仓库恢复最新数据」</strong>
+            一键镜像（会清空本机数据，已自动归档可回滚）。
+          </p>
+        </div>
         {lastImport && (
           <div className="rounded-md border border-line bg-canvas/60 p-2.5 text-xs text-sub">
             <div className="mb-1 text-hint">最近一次导入</div>
