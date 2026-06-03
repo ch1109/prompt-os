@@ -474,7 +474,7 @@ export default function Settings() {
           <div className="flex items-center gap-2 rounded-md border border-moss/40 bg-moss-soft/50 px-3 py-2 text-xs text-moss">
             <UploadCloud size={13} strokeWidth={1.7} className="shrink-0" />
             <span>
-              已于 {formatRelative(savedToRepoAt)} 写入仓库快照，下一步执行下方 git 命令提交并推送 ↓
+              已于 {formatRelative(savedToRepoAt)} 保存并自动提交推送到仓库 ✓（若推送失败可用下方命令手动补推）
             </span>
           </div>
         )}
@@ -484,7 +484,7 @@ export default function Settings() {
             <strong className="text-sub">A 台（编辑端 · dev）</strong>
             ：编辑完点上方
             <strong className="text-moss">「保存快照到仓库」</strong>
-            直接写入 public/data-snapshot.json，再执行：
+            即自动写盘 + git 提交并推送，一步到位。下方命令仅在自动推送失败时手动兜底：
           </p>
           <div className="flex items-stretch gap-1.5">
             <code className="block flex-1 select-all rounded bg-soft px-2 py-1 font-mono text-[11px] leading-relaxed text-ink">

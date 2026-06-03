@@ -104,17 +104,26 @@ export async function exportAllData(): Promise<BackupStats> {
 /** dev 中间件落盘端点，实现见 vite.config.ts 的 snapshotWriter 插件。 */
 const SAVE_SNAPSHOT_URL = "/__save-snapshot";
 
+/** 中间件自动 git 操作的结果（dev only）。 */
+export interface SnapshotGitResult {
+  committed: boolean;
+  pushed: boolean;
+  detail: string;
+}
+
 /**
- * 一键把当前 IndexedDB 五表写入仓库快照 public/data-snapshot.json。
+ * 一键把当前 IndexedDB 五表写入仓库快照 public/data-snapshot.json，并自动 git
+ * commit + push。
  *
- * 仅在 `pnpm dev` 下可用——靠 Vite dev 中间件落盘，生产构建无此端点（端点缺失会 404）。
- * 设计意图：消除「导出文件落 Downloads → 手动改名搬进 public/」这个最易断的环节，
- * 文件名与路径都由中间件写死、不会出错。写盘后仍需你手动 `git commit && push`——
- * push 是不可逆的外发操作，有意保留人工确认，本函数绝不自动提交。
+ * 仅在 `pnpm dev` 下可用——靠 Vite dev 中间件落盘 + 提交，生产构建无此端点（缺失会 404）。
+ * 设计意图：消除「导出文件落 Downloads → 手动改名搬进 public/ → 手敲 git」的全部断点，
+ * 跨设备同步降为「点一下」。git 结果由中间件随响应回传（`git` 字段）：push 失败时
+ * 写盘与 commit 仍算成功，调用方据 `git.pushed/detail` 提示并保留手动命令兜底。
  */
 export async function saveSnapshotToRepo(): Promise<{
   counts: BackupStats;
   exportedAt: number;
+  git?: SnapshotGitResult;
 }> {
   const file = await collectBackup();
   const res = await fetch(SAVE_SNAPSHOT_URL, {
@@ -129,9 +138,10 @@ export async function saveSnapshotToRepo(): Promise<{
         : `写入仓库快照失败（HTTP ${res.status}）`
     );
   }
+  const payload = (await res.json().catch(() => ({}))) as { git?: SnapshotGitResult };
   // 本机刚把自己推上仓库 → 本机即与这份快照同步，落锚点供后续方向判断。
   setSyncAnchor(file.exportedAt);
-  return { counts: file.counts, exportedAt: file.exportedAt };
+  return { counts: file.counts, exportedAt: file.exportedAt, git: payload.git };
 }
 
 export interface SnapshotGitState {

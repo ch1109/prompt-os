@@ -22,13 +22,22 @@ function notifySyncChanged() {
   window.dispatchEvent(new Event(SYNC_CHANGED_EVENT));
 }
 
-/** A 台：把本机数据写入仓库快照（dev only）。成功后 toast 引导执行 git。 */
+/**
+ * A 台：把本机数据写入仓库快照并自动 git commit + push（dev only）。
+ * 据中间件回传的 git 结果分级提示：已推送 / 已提交但推送失败 / 数据无变化。
+ */
 export async function runSaveToRepo(): Promise<boolean> {
   try {
-    const { counts } = await saveSnapshotToRepo();
+    const { counts, git } = await saveSnapshotToRepo();
     const total =
       counts.prompts + counts.contexts + counts.scenarios + counts.taskPacks + counts.workflows;
-    toast.success(`已写入 public/data-snapshot.json（${total} 条），下一步执行 git 提交并推送`);
+    if (!git || git.pushed) {
+      toast.success(`已保存并推送到仓库（${total} 条），B 台 git pull 后即可恢复`);
+    } else if (git.committed) {
+      toast.error(`已提交但推送失败：${git.detail}。请手动 git push`);
+    } else {
+      toast.info(git.detail || "数据无变化，仓库快照已是最新");
+    }
     notifySyncChanged();
     return true;
   } catch (e) {
