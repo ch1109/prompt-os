@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Workflow as WorkflowIcon } from "lucide-react";
 import { splitPrompts } from "@/services/parser";
 import { classifyBatch } from "@/services/classifier";
@@ -10,6 +11,7 @@ import type { Prompt } from "@/types";
 type Step = "paste" | "classifying" | "done" | "graphing" | "graph-done";
 
 export default function Import() {
+  const navigate = useNavigate();
   const [raw, setRaw] = useState("");
   const [step, setStep] = useState<Step>("paste");
   const [preview, setPreview] = useState<string[]>([]);
@@ -107,39 +109,39 @@ export default function Import() {
     return (
       <div className="mx-auto max-w-xl p-6 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h1 className="text-xl font-semibold">导入完成</h1>
-        <p className="text-sm text-foreground/60">
+        <h1 className="text-xl font-semibold text-ink">导入完成</h1>
+        <p className="text-sm text-sub">
           已导入 {progress.total} 条 Prompt。低置信度条目已标记为「待确认」。
         </p>
-        <div className="rounded-lg border border-accent/20 bg-accent/[0.04] p-4 space-y-2 text-left">
+        <div className="rounded-lg border border-moss/30 bg-moss-soft/30 p-4 space-y-2 text-left">
           <div className="flex items-center gap-1.5">
-            <WorkflowIcon size={14} className="text-accent" />
-            <h2 className="text-sm font-medium">下一步：构建上下游任务图</h2>
+            <WorkflowIcon size={14} className="text-moss" />
+            <h2 className="text-sm font-medium text-ink">下一步：构建上下游任务图</h2>
           </div>
-          <p className="text-xs text-foreground/65">
+          <p className="text-xs text-sub">
             让 AI 分析这批 Prompt 之间的协作关系，自动填充每条的「任务流」（上游 / 下游），并解锁工作流自动推荐。
           </p>
           <button
             onClick={handleBuildGraph}
-            className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+            className="rounded bg-moss px-3 py-1.5 text-xs font-medium text-paper hover:bg-moss/90"
           >
             立即构建任务图（按一级场景分组）
           </button>
         </div>
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-amber">{error}</p>}
         <div className="flex gap-3 justify-center pt-1">
           <button
             onClick={handleReset}
-            className="rounded border px-3 py-1.5 text-sm hover:bg-muted"
+            className="rounded border border-line px-3 py-1.5 text-sm text-sub hover:bg-soft"
           >
             继续导入
           </button>
-          <a
-            href="/prompts"
-            className="rounded border px-3 py-1.5 text-sm hover:bg-muted"
+          <button
+            onClick={() => navigate("/prompts")}
+            className="rounded border border-line px-3 py-1.5 text-sm text-sub hover:bg-soft"
           >
             稍后再说，先看 Prompt 库
-          </a>
+          </button>
         </div>
       </div>
     );
@@ -148,14 +150,14 @@ export default function Import() {
   if (step === "graphing") {
     return (
       <div className="mx-auto max-w-xl p-6 space-y-4">
-        <h1 className="text-xl font-semibold">构建任务图中…</h1>
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <p className="text-sm text-foreground/70 tabular-nums">
+        <h1 className="text-xl font-semibold text-ink">构建任务图中…</h1>
+        <div className="rounded-lg border border-line p-4 space-y-3">
+          <p className="text-sm text-sub tabular-nums">
             已完成 {graphProgress.done} / {graphProgress.total} 组
           </p>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-2 rounded-full bg-soft overflow-hidden">
             <div
-              className="h-full bg-accent transition-all"
+              className="h-full bg-moss transition-all"
               style={{
                 width: `${
                   graphProgress.total ? (graphProgress.done / graphProgress.total) * 100 : 0
@@ -163,7 +165,7 @@ export default function Import() {
               }}
             />
           </div>
-          <p className="text-xs text-foreground/40">每组独立调用 AI，可能需要十几秒到一分钟…</p>
+          <p className="text-xs text-hint">每组独立调用 AI，可能需要十几秒到一分钟…</p>
         </div>
       </div>
     );
@@ -173,27 +175,27 @@ export default function Import() {
     return (
       <div className="mx-auto max-w-xl p-6 text-center space-y-4">
         <div className="text-4xl">🎉</div>
-        <h1 className="text-xl font-semibold">导入 + 任务图全部完成</h1>
-        <p className="text-sm text-foreground/60">
+        <h1 className="text-xl font-semibold text-ink">导入 + 任务图全部完成</h1>
+        <p className="text-sm text-sub">
           已导入 {progress.total} 条 Prompt；任务图已更新 {graphResult?.updated ?? 0} 条上下游关系（
           {graphResult?.groups ?? 0} 组）。
         </p>
         <div className="flex gap-3 justify-center">
-          <a
-            href="/"
-            className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+          <button
+            onClick={() => navigate("/")}
+            className="rounded bg-moss px-3 py-1.5 text-sm text-paper hover:bg-moss/90"
           >
             前往工作台
-          </a>
-          <a
-            href="/prompts"
-            className="rounded border px-3 py-1.5 text-sm hover:bg-muted"
+          </button>
+          <button
+            onClick={() => navigate("/prompts")}
+            className="rounded border border-line px-3 py-1.5 text-sm text-sub hover:bg-soft"
           >
             查看 Prompt 库
-          </a>
+          </button>
           <button
             onClick={handleReset}
-            className="rounded border px-3 py-1.5 text-sm hover:bg-muted"
+            className="rounded border border-line px-3 py-1.5 text-sm text-sub hover:bg-soft"
           >
             继续导入
           </button>
@@ -205,18 +207,18 @@ export default function Import() {
   if (step === "classifying") {
     return (
       <div className="mx-auto max-w-xl p-6 space-y-4">
-        <h1 className="text-xl font-semibold">AI 分类中…</h1>
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <p className="text-sm text-foreground/70">
+        <h1 className="text-xl font-semibold text-ink">AI 分类中…</h1>
+        <div className="rounded-lg border border-line p-4 space-y-3">
+          <p className="text-sm text-sub">
             已分类 {progress.done} / {progress.total}
           </p>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-2 rounded-full bg-soft overflow-hidden">
             <div
-              className="h-full bg-accent transition-all"
+              className="h-full bg-moss transition-all"
               style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
             />
           </div>
-          <p className="text-xs text-foreground/40">并发 3 个请求，请勿关闭页面…</p>
+          <p className="text-xs text-hint">并发 3 个请求，请勿关闭页面…</p>
         </div>
       </div>
     );
@@ -224,10 +226,10 @@ export default function Import() {
 
   return (
     <div className="mx-auto max-w-xl p-6 space-y-4">
-      <h1 className="text-xl font-semibold">批量导入 Prompt</h1>
+      <h1 className="text-xl font-semibold text-ink">批量导入 Prompt</h1>
 
       <div className="space-y-2">
-        <label className="text-xs text-foreground/60">
+        <label className="text-xs text-sub">
           粘贴 Prompt 文本（用空行或 ### 分隔多条）
         </label>
         <textarea
@@ -239,19 +241,19 @@ export default function Import() {
         />
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-amber">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           onClick={handleParse}
-          className="rounded border px-3 py-1.5 text-sm hover:bg-muted"
+          className="rounded border border-line px-3 py-1.5 text-sm text-sub hover:bg-soft"
         >
           解析边界
         </button>
         {preview.length > 0 && (
           <button
             onClick={handleClassify}
-            className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+            className="rounded bg-moss px-3 py-1.5 text-sm text-paper hover:bg-moss/90"
           >
             开始 AI 分类（{preview.length} 条）
           </button>
@@ -260,11 +262,11 @@ export default function Import() {
 
       {preview.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-foreground/60">预览（共 {preview.length} 条）：</p>
-          <div className="max-h-60 overflow-y-auto space-y-1.5 rounded-lg border border-border p-3">
+          <p className="text-xs text-sub">预览（共 {preview.length} 条）：</p>
+          <div className="max-h-60 overflow-y-auto space-y-1.5 rounded-lg border border-line p-3">
             {preview.map((p, i) => (
-              <div key={i} className="rounded bg-muted px-2 py-1.5 text-xs">
-                <span className="text-foreground/40 mr-2">#{i + 1}</span>
+              <div key={i} className="rounded bg-soft px-2 py-1.5 text-xs text-ink">
+                <span className="text-hint mr-2">#{i + 1}</span>
                 {p.slice(0, 80)}{p.length > 80 ? "…" : ""}
               </div>
             ))}
