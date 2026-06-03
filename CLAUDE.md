@@ -91,7 +91,6 @@ React 19 + TypeScript 6 + Vite 8 / Tailwind CSS 3 + lucide-react / Zustand 5 / R
 - `titleSuggester.ts` — AI 辅助生成标题
 - `templateVariables.ts` — `{{变量名}}` 插槽提取与渲染（PromptDetail / UsePromptDialog 共用）
 - `scenePackHelper.ts` — 场景树辅助（如收集子树下所有 prompts）
-- `templateExport.ts` — 按 id 选取部分资产导出/导入（用于 Templates 页分享）
 - `backup.ts` — 全量备份与跨设备同步（Settings 页）。底层 `collectBackup()` 读五表组装 `BackupFile`，被下列入口共用：`exportAllData`（→ 下载 JSON）、`saveSnapshotToRepo`（**仅 dev**，POST `/__save-snapshot` 由 vite.config.ts 的 `snapshotWriter` 中间件直接写 `public/data-snapshot.json` **并自动 git add/commit/push**，生产构建无此端点会 404）、`importBackupFromFile`（**合并**导入，id 冲突自动重命名而非覆盖）、`restoreBackupFromFile`/`restoreFromRepoSnapshot`（**覆盖式**恢复，共用 `applyRestore`：清空五表 + bulkPut，清空前必经 `writeMigrationArchive` 归档可回滚）。**两条数据流必须分清**：① 自用·多设备同步走 `public/data-snapshot.json` 覆盖式镜像（last-writer-wins）；② 商业·分发给客户走 seed 三件套（幂等 probe，零覆盖），**绝不能拿 data-snapshot.json 当分发通道**——客户点「从仓库恢复」会被 `applyRestore` 清空自己编辑的数据。**自用同步 SOP**：A 台（dev）点「保存快照到仓库」→ 中间件自动 `git add/commit/push`（commit 用 pathspec 只提交快照文件，文件无变化则跳过不产生空提交；push 失败只回传 detail 不阻塞，UI 提示并保留手动命令兜底）；B 台 `git pull` 后点「从仓库恢复最新数据」一键镜像（无需选文件）。**中间件落盘坑**：接收 request body 必须 `Buffer.concat(chunks)` 后再 `toString("utf8")`，绝不能 `body += chunk`——快照含大量中文，多字节字符跨 chunk 边界会被逐块解码损坏（已踩，见 vite.config.ts 注释）
 - `share.ts` / `supabase.ts` — 可选的 Supabase 在线分享（仅 Templates 页用，需 `.env.local` 配置 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`）
 - `inviteCode.ts` / `redeem.ts` / `redemption.ts` / `adminPackager.ts` / `adminTemplate.ts` — 兑换码 / 模板包 / admin 后台相关，与普通用户搜索/编辑流程无关
