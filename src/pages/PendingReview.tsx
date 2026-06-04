@@ -6,7 +6,8 @@ export default function PendingReview() {
   const items = useLiveQuery(() => db.prompts.filter((p) => !!p.pendingReview).toArray()) ?? [];
 
   return (
-    <div className="mx-auto max-w-2xl p-4 space-y-3">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">待确认 ({items.length})</h1>
         <p className="text-xs text-foreground/50">AI 置信度 &lt; 0.7 的条目，请人工确认后入库</p>
@@ -48,6 +49,7 @@ export default function PendingReview() {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

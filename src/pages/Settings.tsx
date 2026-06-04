@@ -282,7 +282,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 p-6 text-sm">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-xl space-y-6 p-6 text-sm">
       <h1 className="text-xl font-semibold">设置</h1>
 
       <div className="space-y-3 rounded-lg border border-line p-4">
@@ -607,6 +608,7 @@ export default function Settings() {
             })}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );

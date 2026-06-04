@@ -107,7 +107,7 @@ export default function Import() {
 
   if (step === "done") {
     return (
-      <div className="mx-auto max-w-xl p-6 text-center space-y-4">
+      <div className="mx-auto h-full max-w-xl overflow-y-auto p-6 text-center space-y-4">
         <div className="text-4xl">✅</div>
         <h1 className="text-xl font-semibold text-ink">导入完成</h1>
         <p className="text-sm text-sub">
@@ -149,7 +149,7 @@ export default function Import() {
 
   if (step === "graphing") {
     return (
-      <div className="mx-auto max-w-xl p-6 space-y-4">
+      <div className="mx-auto h-full max-w-xl overflow-y-auto p-6 space-y-4">
         <h1 className="text-xl font-semibold text-ink">构建任务图中…</h1>
         <div className="rounded-lg border border-line p-4 space-y-3">
           <p className="text-sm text-sub tabular-nums">
@@ -173,7 +173,7 @@ export default function Import() {
 
   if (step === "graph-done") {
     return (
-      <div className="mx-auto max-w-xl p-6 text-center space-y-4">
+      <div className="mx-auto h-full max-w-xl overflow-y-auto p-6 text-center space-y-4">
         <div className="text-4xl">🎉</div>
         <h1 className="text-xl font-semibold text-ink">导入 + 任务图全部完成</h1>
         <p className="text-sm text-sub">
@@ -206,7 +206,7 @@ export default function Import() {
 
   if (step === "classifying") {
     return (
-      <div className="mx-auto max-w-xl p-6 space-y-4">
+      <div className="mx-auto h-full max-w-xl overflow-y-auto p-6 space-y-4">
         <h1 className="text-xl font-semibold text-ink">AI 分类中…</h1>
         <div className="rounded-lg border border-line p-4 space-y-3">
           <p className="text-sm text-sub">

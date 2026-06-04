@@ -74,14 +74,14 @@ body {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgb(var(--scrollbar) / var(--scrollbar-alpha));
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *:hover::-webkit-scrollbar-thumb,
 *:focus-within::-webkit-scrollbar-thumb {
-  background: rgb(var(--scrollbar) / var(--scrollbar-alpha));
+  background: rgb(var(--scrollbar) / 0.4);
   background-clip: padding-box;
 }
 

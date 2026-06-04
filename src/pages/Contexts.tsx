@@ -126,7 +126,8 @@ export default function Contexts() {
           </select>
         </div>
 
-        {filtered.length === 0 ? (
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
+          {filtered.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line bg-soft/40 py-12 text-center">
             <p className="text-sm text-hint">
               {contexts.length === 0
@@ -146,7 +147,8 @@ export default function Contexts() {
               />
             ))}
           </ul>
-        )}
+          )}
+        </div>
       </div>
       <ContextEditor
         open={editor.open}
