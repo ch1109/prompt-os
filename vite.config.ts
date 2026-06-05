@@ -151,6 +151,9 @@ export default defineConfig({
     alias: { "@": path.resolve(__dirname, "./src") },
   },
   server: {
+    // host: true 同时监听 IPv4(0.0.0.0) + IPv6(::)。Vite 默认只听 IPv6 localhost(::1)，
+    // 而浏览器（尤其 Chrome）常把 localhost 解析成 IPv4 127.0.0.1 → 连不上「打不开」。
+    host: true,
     port: 5173,
     strictPort: true,
   },
