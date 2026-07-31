@@ -1,0 +1,15 @@
+appId: com.promptos.desktop
+productName: Prompt OS
+directories:
+  output: release
+# 只打 Electron 壳 + 构建产物 + 与主进程共用的 git 同步模块，
+# 源码 / 出厂 markdown / supabase 目录一概不进包。
+files:
+  - dist/**
+  - electron/**
+  - scripts/snapshotRepo.mjs
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  # 未做签名与公证：首次打开需右键 → 打开（Gatekeeper）。
+  identity: null
