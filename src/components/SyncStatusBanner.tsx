@@ -8,6 +8,7 @@ import {
   type SnapshotGitState,
 } from "@/services/backup";
 import { runRepoRestore, runSaveToRepo, SYNC_CHANGED_EVENT } from "@/services/syncActions";
+import { canWriteRepo } from "@/services/desktop";
 import { formatRelative } from "@/utils/formatRelative";
 
 /**
@@ -52,7 +53,7 @@ export function SyncStatusBanner() {
   // 文件级、可靠：快照写盘但未 commit。必须盖过 in-sync 的静默，否则 A 台保存后
   // 横幅消失、用户忘了 commit/push，B 台拉到旧快照——正是要堵的断点。
   // unpushed 是分支级（会被无关 ahead 提交触发），不进横幅，只在设置页作信息提示。
-  const uncommitted = import.meta.env.DEV && git?.state === "uncommitted";
+  const uncommitted = canWriteRepo && git?.state === "uncommitted";
   if (state === "no-snapshot") return null;
   if (state === "in-sync" && !uncommitted) return null;
 
@@ -80,7 +81,7 @@ export function SyncStatusBanner() {
           tone: "amber" as const,
           Icon: UploadCloud,
           text: `本机有${anchor ? ` ${formatRelative(anchor)} 之后` : ""}的编辑尚未同步到仓库${git ? `（${git.detail}）` : ""}。`,
-          action: import.meta.env.DEV
+          action: canWriteRepo
             ? { label: "保存快照到仓库", onClick: () => act(runSaveToRepo) }
             : { label: "去同步设置", onClick: goSettings },
         };

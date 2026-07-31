@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { writeMigrationArchive } from "@/db/snapshot";
+import { desktop } from "@/services/desktop";
 import type { Context, Prompt, Scenario, TaskPack, Workflow } from "@/types";
 
 const BACKUP_VERSION = 1;
@@ -115,9 +116,12 @@ export interface SnapshotGitResult {
  * 一键把当前 IndexedDB 五表写入仓库快照 public/data-snapshot.json，并自动 git
  * commit + push。
  *
- * 仅在 `pnpm dev` 下可用——靠 Vite dev 中间件落盘 + 提交，生产构建无此端点（缺失会 404）。
+ * 两条宿主路径，行为一致：
+ * - web：`pnpm dev` 下靠 Vite dev 中间件落盘 + 提交，生产构建无此端点（缺失会 404）；
+ * - 桌面（Electron）：走 preload 暴露的 IPC，写用户在设置页选定的仓库目录。
+ *
  * 设计意图：消除「导出文件落 Downloads → 手动改名搬进 public/ → 手敲 git」的全部断点，
- * 跨设备同步降为「点一下」。git 结果由中间件随响应回传（`git` 字段）：push 失败时
+ * 跨设备同步降为「点一下」。git 结果随响应回传（`git` 字段）：push 失败时
  * 写盘与 commit 仍算成功，调用方据 `git.pushed/detail` 提示并保留手动命令兜底。
  */
 export async function saveSnapshotToRepo(): Promise<{
@@ -126,19 +130,28 @@ export async function saveSnapshotToRepo(): Promise<{
   git?: SnapshotGitResult;
 }> {
   const file = await collectBackup();
-  const res = await fetch(SAVE_SNAPSHOT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(file, null, 2),
-  });
-  if (!res.ok) {
-    throw new Error(
-      res.status === 404
-        ? "写盘端点不可用：请确认在 pnpm dev 下操作（生产构建无法写入仓库）"
-        : `写入仓库快照失败（HTTP ${res.status}）`
-    );
+  const body = JSON.stringify(file, null, 2);
+
+  let payload: { git?: SnapshotGitResult };
+  if (desktop) {
+    const out = await desktop.saveSnapshot(body);
+    if (!out.ok) throw new Error(out.error ?? "写入仓库快照失败");
+    payload = { git: out.git };
+  } else {
+    const res = await fetch(SAVE_SNAPSHOT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    if (!res.ok) {
+      throw new Error(
+        res.status === 404
+          ? "写盘端点不可用：请确认在 pnpm dev 下操作（生产构建无法写入仓库）"
+          : `写入仓库快照失败（HTTP ${res.status}）`
+      );
+    }
+    payload = (await res.json().catch(() => ({}))) as { git?: SnapshotGitResult };
   }
-  const payload = (await res.json().catch(() => ({}))) as { git?: SnapshotGitResult };
   // 本机刚把自己推上仓库 → 本机即与这份快照同步，落锚点供后续方向判断。
   setSyncAnchor(file.exportedAt);
   return { counts: file.counts, exportedAt: file.exportedAt, git: payload.git };
@@ -150,10 +163,11 @@ export interface SnapshotGitState {
 }
 
 /**
- * 只读探测仓库快照的 git 状态（dev only，端点见 vite.config.ts）。
- * 生产构建无此端点——返回 null，调用方据此不显示 git 维度信息。
+ * 只读探测仓库快照的 git 状态。桌面端走 IPC；web 端仅 dev 有此端点（见 vite.config.ts），
+ * 生产构建返回 null，调用方据此不显示 git 维度信息。
  */
 export async function peekSnapshotGitState(): Promise<SnapshotGitState | null> {
+  if (desktop) return desktop.gitState();
   if (!import.meta.env.DEV) return null;
   try {
     const res = await fetch("/__snapshot-git-status", { cache: "no-store" });
@@ -345,18 +359,33 @@ export async function getLocalLatestEdit(): Promise<number> {
 }
 
 /**
+ * 取回仓库快照的 JSON。两处（peek 元信息 / 覆盖恢复）共用，保证读的是同一份来源。
+ *
+ * 桌面端优先读**仓库目录里的实时文件**（git pull 后立刻生效，不受安装包里那份
+ * 构建时副本的影响）；读不到（未配置仓库目录）时回退到随包分发的 dist 副本——
+ * 这条回退正好承担首次迁移：新装的桌面端点「从仓库恢复」就能拿到打包时的数据。
+ */
+async function loadRepoSnapshotJson(): Promise<unknown> {
+  if (desktop) {
+    const text = await desktop.readSnapshot();
+    if (text) return JSON.parse(text);
+  }
+  const res = await fetch(REPO_SNAPSHOT_URL, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("仓库里还没有数据快照（public/data-snapshot.json）");
+  }
+  return res.json();
+}
+
+/**
  * 只读取仓库快照的元信息（exportedAt + counts），不做任何恢复。
- * 供恢复前比对时间、提示冲突用，与 restoreFromRepoSnapshot 各自独立 fetch。
+ * 供恢复前比对时间、提示冲突用，与 restoreFromRepoSnapshot 各自独立读取。
  */
 export async function peekRepoSnapshot(): Promise<{
   exportedAt: number | null;
   counts: BackupStats | null;
 }> {
-  const res = await fetch(REPO_SNAPSHOT_URL, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error("仓库里还没有数据快照（public/data-snapshot.json）");
-  }
-  const json = await res.json();
+  const json = await loadRepoSnapshotJson();
   if (isBackupFile(json)) {
     return { exportedAt: json.exportedAt, counts: json.counts };
   }
@@ -364,18 +393,14 @@ export async function peekRepoSnapshot(): Promise<{
 }
 
 /**
- * 一键从仓库快照恢复：fetch public/data-snapshot.json → 覆盖恢复。
+ * 一键从仓库快照恢复：读 public/data-snapshot.json → 覆盖恢复。
  * 用于跨设备同步——B 端 git pull 后无需在文件对话框选文件即可镜像 A 端数据。
  */
 export async function restoreFromRepoSnapshot(): Promise<{
   stats: BackupStats;
   exportedAt: number | null;
 }> {
-  const res = await fetch(REPO_SNAPSHOT_URL, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error("仓库里还没有数据快照（public/data-snapshot.json）");
-  }
-  const { data, exportedAt } = normalizeBackup(await res.json());
+  const { data, exportedAt } = normalizeBackup(await loadRepoSnapshotJson());
   const stats = await applyRestore(data);
   // 本机已镜像这份仓库快照 → 落锚点，后续方向判断以此为基准。
   setSyncAnchor(exportedAt);

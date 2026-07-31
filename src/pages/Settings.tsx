@@ -13,6 +13,7 @@ import {
   RotateCcw,
   CloudDownload,
   ShieldCheck,
+  FolderGit2,
 } from "lucide-react";
 import { useSettings, type ThemeMode } from "@/store/settingsStore";
 import { buildRelationGraph } from "@/services/relationBuilder";
@@ -28,6 +29,7 @@ import {
   type SnapshotGitState,
 } from "@/services/backup";
 import { runSaveToRepo, runRepoRestore } from "@/services/syncActions";
+import { desktop, canWriteRepo } from "@/services/desktop";
 import { formatRelative } from "@/utils/formatRelative";
 import { toast } from "@/store/toastStore";
 import { confirm } from "@/store/confirmStore";
@@ -87,6 +89,7 @@ export default function Settings() {
   const [snapshotBusy, setSnapshotBusy] = useState<string | "creating" | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [gitState, setGitState] = useState<SnapshotGitState | null>(null);
+  const [repoRoot, setRepoRoot] = useState<string | null>(null);
 
   async function refreshSync() {
     const [s, g] = await Promise.all([
@@ -100,7 +103,21 @@ export default function Settings() {
   useEffect(() => {
     setSnapshots(listSnapshots());
     void refreshSync();
+    void desktop?.getRepoRoot().then(setRepoRoot);
   }, []);
+
+  /** 桌面端：选仓库目录。选定后同步状态与 git 状态都会变，立刻重拉一次。 */
+  async function handleChooseRepo() {
+    if (!desktop) return;
+    const res = await desktop.chooseRepoRoot();
+    if (!res.ok) {
+      if (res.error !== "已取消") toast.error(res.error ?? "选择仓库目录失败");
+      return;
+    }
+    setRepoRoot(res.repoRoot ?? null);
+    toast.success("已绑定仓库目录，可以保存/恢复快照了");
+    void refreshSync();
+  }
 
   async function handleCreateSnapshot() {
     setSnapshotBusy("creating");
@@ -392,11 +409,26 @@ export default function Settings() {
         <p className="text-xs text-hint">
           所有数据存储在浏览器 IndexedDB。建议定期导出备份；换浏览器、清缓存或换设备时再导入恢复。
         </p>
+        {desktop && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-canvas/40 px-3 py-2 text-xs">
+            <FolderGit2 size={13} strokeWidth={1.7} className="shrink-0 text-sub" />
+            <span className="text-sub">仓库目录</span>
+            <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-hint">
+              {repoRoot ?? "未绑定 —— 绑定后才能保存快照 / 读取仓库最新数据"}
+            </code>
+            <button
+              onClick={handleChooseRepo}
+              className="shrink-0 rounded border border-line bg-paper px-2 py-1 text-[11px] text-sub transition-colors hover:border-moss/40 hover:text-moss"
+            >
+              {repoRoot ? "更换…" : "选择仓库目录…"}
+            </button>
+          </div>
+        )}
         {sync &&
           (() => {
             // git「快照已写盘未 commit」必须盖过时间戳的「已同步」——否则保存后卡片头条
             // 显示「已同步」会让用户误以为搬运完成、忘了 commit/push，B 台拉到旧快照。
-            const pendingCommit = import.meta.env.DEV && gitState?.state === "uncommitted";
+            const pendingCommit = canWriteRepo && gitState?.state === "uncommitted";
             const meta = pendingCommit
               ? { label: "快照已保存，待提交并推送（见下方 git 命令）", tone: "amber" as const }
               : SYNC_META[sync.state];
@@ -407,7 +439,7 @@ export default function Settings() {
                   仓库快照 {sync.repoAt ? formatRelative(sync.repoAt) : "无"} · 本机最近编辑{" "}
                   {sync.localAt ? formatRelative(sync.localAt) : "无"} · 已镜像{" "}
                   {sync.anchor ? formatRelative(sync.anchor) : "（尚未保存/恢复过）"}
-                  {import.meta.env.DEV && gitState ? ` · git：${gitState.detail}` : ""}
+                  {canWriteRepo && gitState ? ` · git：${gitState.detail}` : ""}
                 </p>
               </div>
             );
@@ -421,11 +453,11 @@ export default function Settings() {
             <Download size={13} strokeWidth={1.7} />
             {backupBusy === "exporting" ? "导出中…" : "导出全部数据"}
           </button>
-          {import.meta.env.DEV && (
+          {canWriteRepo && (
             <button
               onClick={handleSaveToRepo}
               disabled={backupBusy !== "idle"}
-              title="仅 dev 可用：直接写入 public/data-snapshot.json，省去手动改名搬运"
+              title="直接写入 public/data-snapshot.json 并自动提交推送，省去手动改名搬运"
               className="inline-flex items-center gap-1.5 rounded border border-moss/50 bg-moss-soft px-3 py-1.5 text-xs font-medium text-moss transition-colors hover:bg-moss hover:text-paper disabled:opacity-40"
             >
               <UploadCloud size={13} strokeWidth={1.7} />
@@ -471,7 +503,7 @@ export default function Settings() {
             className="hidden"
           />
         </div>
-        {import.meta.env.DEV && savedToRepoAt && (
+        {canWriteRepo && savedToRepoAt && (
           <div className="flex items-center gap-2 rounded-md border border-moss/40 bg-moss-soft/50 px-3 py-2 text-xs text-moss">
             <UploadCloud size={13} strokeWidth={1.7} className="shrink-0" />
             <span>
