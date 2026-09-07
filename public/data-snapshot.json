@@ -1,12 +1,12 @@
 {
   "format": "prompt-os-backup",
   "version": 1,
-  "exportedAt": 1786005349910,
+  "exportedAt": 1788777055603,
   "counts": {
-    "prompts": 240,
+    "prompts": 251,
     "contexts": 2,
     "scenarios": 19,
-    "taskPacks": 94,
+    "taskPacks": 90,
     "workflows": 0
   },
   "data": {
@@ -86,6 +86,32 @@
         "lastUsedAt": 1781000566824,
         "createdAt": 1780905455865,
         "updatedAt": 1780905455865,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "1Wew1G6SD545nnYPC_8Se",
+        "title": "实战教练 （主动版）",
+        "body": "阶段5：实战教练\n\n接下来请作为我的实战教练。\n\n这是我完成的练习：\n\n【粘贴作品 / 答案 / 思考过程】\n\n不要直接帮我重做。\n\n请先判断：\n\n哪些地方做对了；\n最大的1～3个问题是什么；\n问题背后的能力短板是什么；\n我的思考过程哪里出现了偏差；\n如果是高手，他会多考虑哪一步；\n给我一个最值得马上修改的动作。\n\n然后给我下一轮练习。\n\n原则：\n\n不要只评价最终答案，更重要的是纠正我的判断方式。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788231709007,
+        "updatedAt": 1788231709007,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -324,6 +350,58 @@
         "boundContextIds": []
       },
       {
+        "id": "9lc2uVZojvxYPK6iaADad",
+        "title": "阶段性项目体检 Prompt",
+        "body": "请基于当前项目代码、已有实现和需求文档，对项目开发现状进行一次完整审查，并规划下一步开发工作。\n\n你的目标不是复述需求，而是回答三个问题：\n\n1. **现在已经做到哪里了？**\n2. **距离需求文档还差什么？**\n3. **接下来应该按什么顺序开发？**\n\n请按以下步骤执行：\n\n### 1. 读取并理解现状\n\n结合当前代码、页面、接口、数据结构、配置和已有功能，判断项目真实开发状态。\n\n不要仅根据文件名、注释、TODO 或需求文档判断“已完成”，必须以实际代码和可运行逻辑为准。\n\n### 2. 对照需求文档逐项核验\n\n将需求拆成具体功能点，并分别标记：\n\n* 已完成\n* 部分完成\n* 未完成\n* 实现与需求不一致\n* 无法确认\n\n对于“部分完成”或“不一致”的项目，要具体说明：\n\n> 当前实现是什么 → 需求要求是什么 → 差距是什么\n\n避免使用“需要完善”“建议优化”这类模糊描述。\n\n### 3. 发现遗漏与隐性问题\n\n除了需求文档中的显性功能，也检查：\n\n* 功能之间是否真正串通\n* 前后端、接口、状态、数据流是否完整\n* 是否存在只有 UI、没有真实逻辑的假完成\n* 是否存在旧逻辑与新需求冲突\n* 是否有重复实现、废弃代码或临时方案\n* 边界情况、异常状态、空数据、错误处理是否缺失\n\n不要为了重构而重构，只指出会影响当前需求实现的问题。\n\n### 4. 输出下一阶段开发计划\n\n基于依赖关系和业务优先级规划开发顺序，而不是简单按照需求文档顺序排列。\n\n优先遵循：\n\n> 底层依赖 → 核心业务闭环 → 关键功能 → 异常处理 → 体验优化\n\n每个开发阶段说明：\n\n* 阶段目标\n* 需要完成的功能\n* 涉及的主要模块/文件\n* 前置依赖\n* 完成标准\n\n### 5. 输出详细 To Do\n\n将下一阶段计划继续拆成 Codex 可以直接执行的任务。\n\n每个 To Do 应满足：\n\n* 一次只解决一个明确问题\n* 能定位到具体模块、页面、组件、接口或逻辑\n* 描述需要修改什么，而不是只写结果\n* 有明确完成标准\n* 标明优先级和依赖关系\n* 不要把过大的工作打包成一个任务\n\n格式例如：\n\n`[P0] 任务名称`\n\n* 当前问题：\n* 修改内容：\n* 涉及位置：\n* 前置依赖：\n* 完成标准：\n\n### 最终输出结构\n\n## 一、当前开发进度\n\n给出整体完成度判断和当前所处阶段。\n\n## 二、需求对照表\n\n| 需求 | 当前状态 | 当前实现 | 差距 / 问题 |\n| -- | ---- | ---- | ------- |\n\n## 三、关键缺口与风险\n\n只列真正影响继续开发或最终交付的问题。\n\n## 四、下一阶段开发计划\n\n按照推荐执行顺序分阶段列出。\n\n## 五、详细 To Do\n\n输出可以直接进入开发执行的任务列表。\n\n## 六、当前最优先的 3 件事\n\n告诉我如果现在立即继续开发，最应该先做哪 3 件事，以及原因。\n\n---\n\n重要原则：\n\n* 以实际代码为事实来源，需求文档为目标来源。\n* 不要因为存在对应文件或 UI 就判断功能已完成。\n* 不要凭空假设已经实现的能力。\n* 无法确认时明确写“无法确认”，并说明需要检查什么。\n* 不要大规模重构已有稳定代码，优先最小范围完成需求。\n* 如果发现需求本身存在冲突、歧义或无法实现的地方，单独指出，不要自行修改需求。\n* 输出必须具体到可以指导下一轮 Codex 直接开始开发。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788777022779,
+        "updatedAt": 1788777051825,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "9nLKn2l4tjouvTFdglm48",
+        "title": "让 AI 主动发现你的下一步",
+        "body": "根据当前聊天中我已经表现出来的认知、问题和目标，站在这个领域顶尖导师的角度判断：\n\n**如果想让我真正进步，我现在最应该继续研究或训练什么？**\n\n不要机械延续我最后一个问题。\n\n请区分：\n\n* 我以为重要的；\n* 实际真正重要的；\n* 我已经掌握的；\n* 我目前最明显的认知盲区；\n* 如果继续沿着现在的思路走，最可能遇到的瓶颈。\n\n然后只选择**最值得解决的一个下一步问题**，深入带我往下走。\n\n判断标准是：\n\n> 解决这个问题以后，是否会显著提高我未来独立解决问题的能力？\n\n不要为了完整而展开很多方向。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788248792200,
+        "updatedAt": 1788248817714,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "A8POC3vaGi7THxkU-2VXw",
         "title": "万能BUG修复提示词",
         "body": "请进入 Bug 修复模式。\n\nBug 描述：{{Bug描述}}\n\n重要要求：\n先不要急着改代码。请按“复现 → 定位 → 假设 → 验证 → 最小修复 → 回归检查”的流程处理。\n\n请你先完成以下事情：\n\n1. 复述你对 Bug 的理解\n   - 当前异常现象是什么\n   - 用户期望的正确表现是什么\n   - 这个 Bug 可能影响哪些页面 / 功能 / 数据\n\n2. 定位相关代码\n   - 找到可能相关的页面、组件、状态管理、接口请求、数据处理、后端逻辑、样式文件\n   - 输出一张“Bug 影响地图”\n   - 说明每个文件为什么可能相关\n\n3. 建立排查假设\n   请列出 3-5 个最可能的原因。\n   每个原因都要包含：\n   - 为什么怀疑它\n   - 需要看哪个文件验证\n   - 用什么现象可以证明它是对的或错的\n\n4. 先给排查方案，不要直接修\n   请告诉我你准备先检查什么、再检查什么。\n   不要一次性大改多个文件。\n\n5. 等你确认根因后，再给最小修复方案\n   修复要求：\n   - 只改和 Bug 直接相关的代码\n   - 不做顺手重构\n   - 不改无关 UI\n   - 不改变现有业务逻辑，除非 Bug 根因就是业务逻辑错误\n   - 修复后说明为什么这样改能解决问题\n\n6. 最后输出验证清单\n   - 原 Bug 如何验证已修复\n   - 哪些相关功能需要回归测试\n   - 是否需要补充测试用例\n   - 是否存在潜在副作用\n\n输出语言要求：\n请用对编程小白友好的方式解释。\n出现技术术语时，用括号补一句白话解释。\n例如：状态管理（页面共用的一块临时数据仓库）、接口请求（前端向后端要数据或提交数据）。",
@@ -424,6 +502,32 @@
         "lastUsedAt": null,
         "createdAt": 1785466604884,
         "updatedAt": 1785466604884,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "B76_SCaMUEYaEd0fUdVqK",
+        "title": "刻意练习提高某部分能力",
+        "body": "阶段4：设计刻意练习\n\n我现在已经学习了：\n\n【能力/知识点】\n\n请不要继续给我讲理论。\n\n请帮我设计一个可以真正训练这项能力的练习。\n\n要求：\n\n30分钟～2小时完成；\n必须让我自己做判断，而不是抄答案；\n有明确输出物；\n有明确评分标准；\n能暴露我的真实弱点；\n可以重复训练。\n\n按照：\n训练任务 → 我需要提交什么 → 评分维度 → 达标标准\n输出。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788231601947,
+        "updatedAt": 1788231643989,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -554,6 +658,32 @@
         "lastUsedAt": null,
         "createdAt": 1779249190440,
         "updatedAt": 1779249190440,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "Dz4UmfxBI7gnYVJnLs9-D",
+        "title": "从零学习 / 建立全局认知",
+        "body": "我想系统理解和学习【主题】。\n\n请不要直接给我堆知识点。\n\n先从第一性原理帮我回答：\n\n1. 这个领域本质上在解决什么问题？\n2. 真正决定水平高低的核心能力是什么？\n3. 高手和普通人的差距主要在哪里？\n4. 哪些知识最重要，哪些看起来重要但实际价值较低？\n5. 如果从零开始，最合理的学习顺序是什么？\n\n然后帮我建立一张简洁但完整的能力地图，并提炼其中最值得长期记住的核心原则。\n\n重点不是让我“知道很多”，而是让我逐渐形成：\n**看问题的方法、判断标准和解决问题的思维框架。**\n\n如果这是一个正在快速变化的领域，请同时考虑当前最新的行业变化和AI带来的影响。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788232607355,
+        "updatedAt": 1788232635727,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -974,6 +1104,32 @@
         "boundContextIds": []
       },
       {
+        "id": "Vdqr6xsNKTBh78-vk3jQy",
+        "title": "建立领域地图",
+        "body": "我想系统学习【领域/技能】。\n\n请你以顶尖实践者和导师的视角，从第一性原理分析：\n\n这个领域存在的根本价值是什么？\n一个真正优秀的人，核心在解决哪些问题？\n高手和普通人真正拉开差距的能力是什么？\n请拆成「一级能力 → 二级能力 → 具体能力」。\n标出：\n入门必须掌握\n核心能力\n高阶能力\n容易被高估的能力\n给出合理的学习先后顺序。\n\n不要急着详细教学。\n\n这一步的目标只是让我先得到一张清晰的「领域能力地图」，知道什么重要、什么不重要、应该先学什么。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788231349436,
+        "updatedAt": 1788231349436,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "X-l3bGbFonN8DX4FjsOIl",
         "title": "参考某个产品，但不照搬",
         "body": "你现在不是简单模仿某个产品，也不是直接照抄它的 UI、文案、代码或业务逻辑。\n\n你的任务是：基于我提供的参考产品，系统分析它在 UI、功能、交互、信息架构、技术方案、用户体验和产品机制上的可借鉴之处，然后结合我当前项目的定位、用户、业务目标和已有实现，转化成适合我项目的设计与开发方案。\n\n请严格按照以下步骤执行：\n\n## 1. 明确分析对象\n\n请先确认我提供的参考产品信息，包括：\n\n* 产品名称 / 链接 / 截图 / 文档 / 代码 / 演示说明\n* 我希望重点参考的部分\n* 当前项目的产品定位\n* 当前项目的目标用户\n* 当前项目已经实现的内容\n* 当前项目不能偏离的核心原则\n\n如果信息不足，请先基于现有材料做最佳分析，并把缺失信息列为「待确认项」，不要因为信息不全就停止工作。\n\n## 2. 拆解参考产品\n\n请从以下维度拆解参考产品：\n\n### A. 产品定位\n\n* 它解决的核心问题是什么\n* 目标用户是谁\n* 用户为什么会选择它\n* 它的核心价值主张是什么\n* 它最强的产品记忆点是什么\n\n### B. 用户旅程\n\n* 用户从哪里进入\n* 用户第一眼看到什么\n* 用户如何开始任务\n* 用户完成核心任务要经过哪些步骤\n* 每一步系统给了什么反馈\n* 用户最终得到什么结果\n* 哪些地方降低了用户理解成本\n* 哪些地方可能造成用户困惑\n\n### C. 信息架构\n\n* 页面如何组织\n* 导航结构是什么\n* 核心对象是什么\n* 内容层级如何设计\n* 主要模块之间如何联动\n* 哪些信息被前置\n* 哪些信息被隐藏或延后展示\n\n### D. UI 视觉与布局\n\n* 整体视觉风格是什么\n* 页面密度如何\n* 主色、辅助色、背景色的大致关系\n* 卡片、按钮、表格、侧边栏、弹窗等组件如何使用\n* 空状态、加载状态、错误状态如何呈现\n* 哪些 UI 细节值得学习\n* 哪些视觉元素不适合照搬\n\n### E. 交互机制\n\n* 用户如何触发操作\n* 系统如何反馈\n* 是否有拖拽、快捷操作、批量操作、分步引导\n* 是否有确认、撤销、回退、保存草稿等机制\n* 哪些交互让流程更顺\n* 哪些交互可能增加复杂度\n\n### F. 功能设计\n\n* 核心功能有哪些\n* 辅助功能有哪些\n* 哪些功能是产品成立的关键\n* 哪些功能只是增强体验\n* 功能之间的依赖关系是什么\n* 哪些功能适合我当前项目\n* 哪些功能不适合我当前阶段\n\n### G. 技术方案\n\n* 它可能采用了什么前端架构\n* 它可能采用了什么后端架构\n* 它的数据模型可能是什么\n* 它的状态管理方式可能是什么\n* 它的 AI / Agent / 工作流机制可能是什么\n* 它有哪些工程实现难点\n* 哪些技术方案适合我当前项目\n* 哪些方案过度复杂，暂时不建议采用\n\n## 3. 提炼可复用原则\n\n请不要停留在“它用了什么组件”这种表层分析。\n\n请提炼成原则：\n\n* 它为什么这样设计\n* 这个设计解决了什么用户问题\n* 这个设计背后的产品逻辑是什么\n* 如果换到我的项目，应该保留什么思想\n* 应该替换什么表现形式\n* 应该避免什么盲目照搬\n\n输出格式：\n\n| 参考产品做法 | 背后原则 | 用户价值 | 是否适合我项目 | 适配方式 |\n| ------ | ---- | ---- | ------- | ---- |\n\n## 4. 映射到我的项目\n\n请结合我的项目，输出具体适配方案。\n\n必须说明：\n\n* 哪些 UI 布局可以参考\n* 哪些交互流程可以参考\n* 哪些功能机制可以参考\n* 哪些技术方案可以参考\n* 哪些地方不能照搬\n* 哪些地方需要根据我的用户重新设计\n* 当前项目最应该优先借鉴哪 3-5 个点\n\n请按以下格式输出：\n\n| 参考点 | 当前项目对应场景 | 适配方案 | 实现复杂度 | 优先级 | 验收标准 |\n| --- | -------- | ---- | ----- | --- | ---- |\n\n## 5. 生成改造建议\n\n请从三个层级给出建议：\n\n### 第一层：低成本优化\n\n不大改架构，只优化 UI、文案、布局、状态提示和流程顺序。\n\n### 第二层：中等改造\n\n需要调整页面结构、组件组织、数据流或用户路径。\n\n### 第三层：架构级改造\n\n涉及技术架构、数据模型、Agent 工作流、权限体系、任务系统等。\n\n每个建议都必须包含：\n\n* 要解决的问题\n* 当前项目可能存在的缺陷\n* 参考产品带来的启发\n* 具体怎么改\n* 涉及哪些页面 / 组件 / 数据 / 接口\n* 验收标准\n* 风险\n\n## 6. 输出最终方案\n\n请最终输出：\n\n# 参考产品分析结论\n\n一句话说明这个产品最值得学习的地方。\n\n# 可借鉴点清单\n\n按 UI、功能、交互、信息架构、技术方案分类。\n\n# 不建议照搬的点\n\n说明为什么不适合我当前项目。\n\n# 当前项目适配方案\n\n说明应该如何转化为我的产品方案。\n\n# 最小改造任务清单\n\n每个任务必须包含：\n任务 ID｜参考来源｜当前问题｜改造目标｜涉及文件或模块｜验收标准｜优先级\n\n# 最终判断\n\n请明确判断：\n\n* 适合深度参考\n* 适合局部参考\n* 只适合参考视觉风格\n* 不适合作为主要参考对象\n\n重要规则：\n\n* 不允许照抄参考产品的 UI、文案、代码和专有设计。\n* 不允许只说“可以借鉴”，必须说清楚借鉴什么、为什么、怎么转化。\n* 不允许提出无法落地的泛泛建议。\n* 所有建议必须能变成具体开发任务。\n* 如果参考产品和我的产品目标不同，必须指出差异，不能强行套用。",
@@ -1048,6 +1204,32 @@
         "lastUsedAt": null,
         "createdAt": 1779256725219,
         "updatedAt": 1779256763980,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "Yf4vYnbwjelu-NwfZaMJ5",
+        "title": "阶段2：提炼高手心法",
+        "body": "阶段2：提炼高手心法\n\n基于刚才的能力地图，请提炼这个领域最重要的【20/50/100】条高手心法。\n\n这里的心法不是“努力、坚持、多练习”这种通用建议，而是：\n\n遇到真实问题时，可以直接帮助我做判断的原则。\n\n要求：\n\n每条一句话；\n不重复；\n按重要性排序；\n标明它属于哪个能力模块；\n优先写高手和普通人真正存在认知差异的地方；\n如果一个原则只是特定情况下成立，请注明适用条件。\n\n暂时不要展开详细解释。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788231470725,
+        "updatedAt": 1788231470725,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -1282,6 +1464,32 @@
         "lastUsedAt": null,
         "createdAt": 1779778681550,
         "updatedAt": 1779778681550,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "gQ7TqewWNfEgswH-sgqRs",
+        "title": "对不理解的内容进行追问",
+        "body": "我没有完全理解你刚才提到的这部分：\n\n【填写内容】\n\n不要继续增加新的知识点。\n\n请把它拆开讲清楚：\n\n**它是什么 → 为什么 → 具体例子 → 常见误解 → 我应该怎么判断。**\n\n如果里面包含我可能没掌握的前置知识，请先补齐前置知识。\n\n目标是让我真正理解，而不是只是觉得自己听懂了。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788249424593,
+        "updatedAt": 1788249424593,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -2773,7 +2981,8 @@
         "useCount": 0,
         "lastUsedAt": null,
         "createdAt": 1779092237845,
-        "updatedAt": 1779092237845
+        "updatedAt": 1787814864395,
+        "pendingReview": true
       },
       {
         "id": "prompt:v31:2.2",
@@ -4211,8 +4420,8 @@
         "valueLevel": "高频",
         "shareable": true,
         "isFavorited": false,
-        "useCount": 0,
-        "lastUsedAt": null,
+        "useCount": 1,
+        "lastUsedAt": 1787814713136,
         "createdAt": 1779261648385,
         "updatedAt": 1779261648385
       },
@@ -6842,6 +7051,58 @@
         "boundContextIds": []
       },
       {
+        "id": "rjDeSKjrhDQz5wJXJilIw",
+        "title": "深入学习",
+        "body": "现在只学习：\n\n【能力模块 / 心法 / 知识点】\n\n不要扩展到其他内容。\n\n请按下面结构帮我真正理解它：\n\n一句话解释它是什么；\n为什么重要；\n底层原理是什么；\n新手最容易犯什么错误；\n高手遇到这个问题时是怎么思考的；\n给一个非常具体的真实场景：\n错误判断 → 为什么错 → 正确判断 → 怎么行动；\n这条原则什么时候不适用。\n\n最终目标不是让我记住定义，而是让我以后遇到类似问题时能够自己判断。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788231507604,
+        "updatedAt": 1788231546332,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "saInb3kIA6QBsUz6Zs-N-",
+        "title": "继续深挖某个内容",
+        "body": "你刚才提到的：\n\n【填写内容】\n\n我认为这里可能比表面看到的更重要。\n\n请把它继续往下挖3层：\n\n**第一层：它在解决什么表面问题？**\n\n**第二层：背后真正决定结果的机制是什么？**\n\n**第三层：再往下还有什么更底层的规律或认知？**\n\n然后告诉我：\n\n* 普通人通常停在哪一层；\n* 高手通常多看到了什么；\n* 这种理解在真实场景中会导致什么不同的行动。\n\n不要为了深度而故意复杂化，如果已经到达合理底层，就直接告诉我。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788249525687,
+        "updatedAt": 1788249525687,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "sqghKyoEs2BiucS3AKujP",
         "title": "参照集对比 Prompt",
         "body": "你现在扮演一名「参照集校准专家」。\n\n我会给你一个作品、方案、prompt、产品设计或文档：\n\n{{待比较对象}}\n\n请你不要单独评价它，而是帮我把它放到一个参照集里定位。\n\n请输出：\n\n1. 这个对象属于哪一类作品或方案\n2. 这个领域中常见的低水平版本是什么样\n3. 中等水平版本通常做到什么程度\n4. 高水平版本通常具备哪些特征\n5. 顶尖版本和普通好版本的关键差异是什么\n6. 当前对象大概处于哪个水平\n7. 它最接近哪些已知风格或范式\n8. 如果要提升一个档次，最应该补什么\n\n要求：\n- 不要只说优缺点\n- 要建立清晰的比较坐标\n- 如果缺少足够信息，请说明无法准确定位的原因",
@@ -6994,6 +7255,32 @@
         "lastUsedAt": 1779416962290,
         "createdAt": 1779416125628,
         "updatedAt": 1779416125628,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "yctG-coJmnBZMJDZWsLHh",
+        "title": "深入解释追问",
+        "body": "基于我们前面的讨论，我想重点深入理解下面这部分：\n\n【填写你想深入追问的内容 / 复制AI刚才的一段回答 / 写下你没理解的问题】\n\n请不要重新把整个主题讲一遍，而是只围绕这部分继续深入。\n\n请重点帮我回答：\n\n1. **它到底是什么意思？**\n   用更清晰、直白的方式重新解释，不要只是换一种说法。\n\n2. **为什么会这样？**\n   继续向下追问它背后的原因、机制和因果关系，直到触及比较底层的解释。\n\n3. **具体怎么理解？**\n   给我一个非常具体的现实案例，让我看到它在真实场景中是怎么发生的。\n\n4. **高手是怎么理解和使用它的？**\n   告诉我普通理解和更高阶理解之间的差别。\n\n5. **它有什么边界？**\n   什么时候成立，什么时候不成立？有哪些容易误用或过度概括的地方？\n\n6. **它和我已经知道的哪些东西有关？**\n   如果存在重要关联，请帮我建立连接，而不是把它当成一个孤立知识点。\n\n如果你发现我真正困惑的并不是表面这个问题，而是背后缺少某个前置概念，请直接指出并补上。\n\n最终目标是让我从：\n\n“我好像知道这句话是什么意思”\n\n变成：\n\n“我知道它为什么成立、什么时候成立，以及遇到真实问题时怎么使用。”\n",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788249154331,
+        "updatedAt": 1788249163853,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -7462,29 +7749,78 @@
         "updatedAt": 1779416746217
       },
       {
-        "id": "YCEpkMFr0P0WRQKYBTuyo",
-        "title": "认知提升",
+        "id": "bszqX6q2B8rxwz0K74rYz",
+        "title": "学习工作流",
         "goal": "",
         "description": "",
         "sceneCategoryId": "scene:v31:learning",
         "stages": [
           {
-            "id": "IrNX6ieJJB_0b-UoNj17O",
-            "name": "",
+            "id": "it5WbfqvQjOZ0gugo-QXz",
+            "name": "建领域地图",
             "description": "",
             "promptIds": [
-              "TL1pI0nE4yws2njOSqO5V"
+              "Vdqr6xsNKTBh78-vk3jQy",
+              "Dz4UmfxBI7gnYVJnLs9-D"
             ],
             "order": 0
+          },
+          {
+            "id": "rgqUPTneMLGLl_UAMwLcf",
+            "name": "提炼高手心法",
+            "description": "",
+            "promptIds": [
+              "Yf4vYnbwjelu-NwfZaMJ5"
+            ],
+            "order": 1
+          },
+          {
+            "id": "ujqeRtID9CRA81Eo9RSTD",
+            "name": "深入学习一个模块",
+            "description": "",
+            "promptIds": [
+              "rjDeSKjrhDQz5wJXJilIw",
+              "yctG-coJmnBZMJDZWsLHh",
+              "gQ7TqewWNfEgswH-sgqRs",
+              "saInb3kIA6QBsUz6Zs-N-"
+            ],
+            "order": 2
+          },
+          {
+            "id": "E9rZGMjKs_XqAk8a3ihAj",
+            "name": "刻意练习",
+            "description": "",
+            "promptIds": [
+              "B76_SCaMUEYaEd0fUdVqK"
+            ],
+            "order": 3
+          },
+          {
+            "id": "qZNtnRGpwMKMw0kmMRRfY",
+            "name": "实战练习",
+            "description": "",
+            "promptIds": [
+              "1Wew1G6SD545nnYPC_8Se"
+            ],
+            "order": 4
+          },
+          {
+            "id": "dqDJpoO5rlK9eBRlKbpCI",
+            "name": "学习导航",
+            "description": "",
+            "promptIds": [
+              "9nLKn2l4tjouvTFdglm48"
+            ],
+            "order": 5
           }
         ],
         "tags": [],
         "isFavorited": false,
         "useCount": 0,
         "lastUsedAt": null,
-        "order": 40,
-        "createdAt": 1779699934903,
-        "updatedAt": 1779699980088
+        "order": 0,
+        "createdAt": 1788231306251,
+        "updatedAt": 1788249525694
       },
       {
         "id": "mYwnn1Tb4QklSunb_4vMT",
@@ -8999,118 +9335,6 @@
         "order": 40
       },
       {
-        "id": "pack:v31:6.1",
-        "title": "阶梯式概念解释",
-        "goal": "你想搞懂一个概念，但搜出来的解释要么太浅要么太专业。",
-        "description": "你是一个对\"我懂了 vs 我以为我懂了\"极度敏感的概念教练",
-        "sceneCategoryId": "scene:v31:learning",
-        "stages": [
-          {
-            "id": "P-WaB-xZZTIQpcnFS7Cwh",
-            "name": "核心 Prompt",
-            "description": "",
-            "promptIds": [
-              "prompt:v31:6.1"
-            ],
-            "order": 0
-          }
-        ],
-        "tags": [
-          "学习",
-          "阶梯式概念解释"
-        ],
-        "isFavorited": false,
-        "useCount": 0,
-        "lastUsedAt": null,
-        "createdAt": 1779092237845,
-        "updatedAt": 1779092237845,
-        "order": 0
-      },
-      {
-        "id": "pack:v31:6.2",
-        "title": "费曼纠错",
-        "goal": "你以为自己懂了一个东西，想验证一下。",
-        "description": "你是一个不会被\"我自信地讲出来\"骗到的概念审查员",
-        "sceneCategoryId": "scene:v31:learning",
-        "stages": [
-          {
-            "id": "KKj3q-BCDe5uKyHo65-qH",
-            "name": "核心 Prompt",
-            "description": "",
-            "promptIds": [
-              "prompt:v31:6.2"
-            ],
-            "order": 0
-          }
-        ],
-        "tags": [
-          "学习",
-          "费曼纠错"
-        ],
-        "isFavorited": false,
-        "useCount": 0,
-        "lastUsedAt": null,
-        "createdAt": 1779092237845,
-        "updatedAt": 1779092237845,
-        "order": 10
-      },
-      {
-        "id": "pack:v31:6.3",
-        "title": "从 0 到 1 学习路线",
-        "goal": "你想学一个新领域，不知道先学什么、后学什么。",
-        "description": "你是一个反对\"收藏 100 个资料\"的学习路线设计师",
-        "sceneCategoryId": "scene:v31:learning",
-        "stages": [
-          {
-            "id": "7cfKopkQx_WyTctEwKS3y",
-            "name": "核心 Prompt",
-            "description": "",
-            "promptIds": [
-              "prompt:v31:6.3"
-            ],
-            "order": 0
-          }
-        ],
-        "tags": [
-          "学习",
-          "从 0 到 1 学习路线"
-        ],
-        "isFavorited": false,
-        "useCount": 0,
-        "lastUsedAt": null,
-        "createdAt": 1779092237845,
-        "updatedAt": 1779092237845,
-        "order": 20
-      },
-      {
-        "id": "pack:v31:6.4",
-        "title": "刻意练习设计",
-        "goal": "你懂道理，但一到使用时还是用不上。",
-        "description": "你是一个刻意练习教练",
-        "sceneCategoryId": "scene:v31:learning",
-        "stages": [
-          {
-            "id": "aJZPRuiuDX35usjmGgjBU",
-            "name": "核心 Prompt",
-            "description": "",
-            "promptIds": [
-              "prompt:v31:6.4"
-            ],
-            "order": 0
-          }
-        ],
-        "tags": [
-          "学习",
-          "刻意练习设计"
-        ],
-        "isFavorited": false,
-        "useCount": 0,
-        "lastUsedAt": null,
-        "createdAt": 1779092237845,
-        "updatedAt": 1779092237845,
-        "order": 30
-      },
-      {
         "id": "pack:v31:7.1",
         "title": "问题重构",
         "goal": "你卡在一个问题上很久，自己也说不清楚到底卡在哪。",
@@ -9572,8 +9796,8 @@
           "00｜想法成型"
         ],
         "isFavorited": false,
-        "useCount": 2,
-        "lastUsedAt": 1785480810991,
+        "useCount": 3,
+        "lastUsedAt": 1787814713142,
         "createdAt": 1779261648385,
         "updatedAt": 1779689476981,
         "order": 0
@@ -9805,6 +10029,15 @@
               "kxgLf6laCn94Wc9NGwKIY"
             ],
             "order": 3
+          },
+          {
+            "id": "bmlBOu7PJv1TuBhdc9Nqu",
+            "name": "基于需求文档和当前开发进度输出计划",
+            "description": "",
+            "promptIds": [
+              "9lc2uVZojvxYPK6iaADad"
+            ],
+            "order": 4
           }
         ],
         "tags": [
@@ -9816,7 +10049,7 @@
         "useCount": 6,
         "lastUsedAt": 1781171602177,
         "createdAt": 1779261648385,
-        "updatedAt": 1781150484046,
+        "updatedAt": 1788777022792,
         "order": 60
       },
       {
