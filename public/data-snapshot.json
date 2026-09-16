@@ -1,9 +1,9 @@
 {
   "format": "prompt-os-backup",
   "version": 1,
-  "exportedAt": 1788777055603,
+  "exportedAt": 1789528944159,
   "counts": {
-    "prompts": 251,
+    "prompts": 259,
     "contexts": 2,
     "scenarios": 19,
     "taskPacks": 90,
@@ -164,6 +164,32 @@
         "lastUsedAt": null,
         "createdAt": 1779775874665,
         "updatedAt": 1779775874665,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "47ZokAELdsKBRGE-ewIc9",
+        "title": "我对【领域】几乎零基础，甚至不知道这个领域有哪些问题可以问。",
+        "body": "我对【领域】几乎零基础，甚至不知道这个领域有哪些问题可以问。\n不要直接给我百科式知识。\n请先从一个专业人士“观察世界”的方式出发，为我建立这个领域的知识地图。\n\n按照：\n一级能力 → 二级概念 → 核心术语 → 这个术语解决什么问题 → 一个最直观的例子\n\n来组织。\n\n重点告诉我：\n\n专业人士会观察哪些普通人不会观察的东西；\n哪些概念是理解其他知识的基础；\n哪些术语必须先认识；\n哪些东西现阶段可以暂时不学。\n\n最后给我一条适合零基础的学习顺序。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788835477701,
+        "updatedAt": 1788835477701,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -792,6 +818,32 @@
         "boundContextIds": []
       },
       {
+        "id": "Gp1wJExf2fEZThlFRRkT7",
+        "title": "实战训练：把认知变成能力",
+        "body": "我已经初步学习了【领域】的：\n\n* 核心地图；\n* 基础术语；\n* 高手观察变量；\n* 判断框架。\n\n现在请不要继续给我讲知识。\n\n给我设计一个 **20–30 分钟的新手实战训练**。\n\n要求：\n\n1. 必须让我实际使用刚学到的术语和判断框架；\n2. 不需要额外学习大量新知识；\n3. 最好基于一个真实案例；\n4. 先让我自己观察和判断；\n5. 然后你再像导师一样纠正我的遗漏和错误。\n\n最后告诉我：\n\n**做到什么程度，就说明我已经完成这个领域第一次真正的 0→1。**",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836590014,
+        "updatedAt": 1788836621161,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "HJGBnbRKC9f_fBSjdNUVR",
         "title": "产品需求整理专家",
         "body": "你现在扮演一名非常严格的产品需求整理专家。\n\n我会给你一份逻辑不够清晰的原始材料，可能包含想法、会议记录、客户反馈、零散功能点、口头描述、重复表达和不确定信息。\n\n你的任务不是润色文档，而是把它整理成后续产品设计、PRD 编写、页面设计、技术方案和 AI 编程开发都能使用的「需求上下文包」。\n\n原始材料如下：\n\n{{原始材料}}\n\n请按以下结构输出：\n\n1. 一句话需求概括\n用一句话说明这个需求本质上要解决什么问题。\n\n2. 背景与触发原因\n说明为什么现在要做这件事，是因为客户要求、业务增长、流程低效、系统问题、竞品压力，还是其他原因。\n\n3. 核心目标\n提炼 3-5 个最重要的目标。每个目标必须具体，不要写“提升体验”这种空话。\n\n4. 目标用户与使用角色\n识别材料中涉及的所有角色，并说明每类角色想完成什么任务。\n\n5. 真实使用场景\n整理用户会在什么情况下使用这个功能，按“场景 - 用户动作 - 期望结果”的格式输出。\n\n6. 功能需求清单\n从材料中提取所有明确功能需求，按优先级分为：\n- 必须做\n- 应该做\n- 可以后续做\n- 暂不建议做\n\n7. 业务规则\n提取所有规则类信息，例如权限、状态流转、金额计算、次数限制、审核机制、通知规则、数据归属等。\n\n8. 页面与交互线索\n整理可能涉及的页面、入口、按钮、表单、列表、详情页、弹窗、操作路径。\n\n9. 数据与字段线索\n整理材料中出现的对象、字段、状态、关系、记录、统计指标。\n\n10. 外部系统与接口线索\n如果材料中涉及支付、短信、微信、小程序、第三方平台、后台系统、AI 模型、文件上传等，请单独列出。\n\n11. 不明确但重要的问题\n列出 15 个必须追问的问题，并说明每个问题会影响什么设计或开发决策。\n\n12. 风险与容易踩坑的地方\n指出这个需求中最可能导致返工、争议、成本失控或实现困难的地方。\n\n13. 初步 MVP 建议\n给出第一版最小可上线范围，并说明哪些内容应该放到二期。\n\n14. 后续可直接交给 AI 的上下文摘要\n用一段 300-500 字的内容，压缩成后续写 PRD、拆任务、生成页面原型时可以直接复用的上下文。",
@@ -1000,6 +1052,32 @@
         "boundContextIds": []
       },
       {
+        "id": "OWsnPTNH7kGV_U3nIyelz",
+        "title": "# 陌生领域 0→1 学习工作流",
+        "body": "# 陌生领域 0→1 学习工作流\n\n# 00｜不知道问什么\n\n当我输入：\n\n> 我对【X】完全不了解，甚至不知道应该问什么。\n\n请先不要直接讲知识。\n\n判断我现在最缺少的是下面哪一种能力：\n\n1. 不知道这个领域有什么；\n2. 看到了东西但不会描述；\n3. 不知道高手在观察什么；\n4. 不知道如何判断好坏；\n5. 已经有基础，但不知道下一步该问什么。\n\n告诉我最适合从哪个阶段开始，并说明原因。\n\n如果我是完全新手，默认从「01 领域地图」开始。\n\n---\n\n# 01｜领域地图\n\n我正在进入【领域】。\n\n请先帮我建立一张最小可用的「领域地图」。\n\n回答：\n\n* 这个领域核心在解决什么问题？\n* 最重要的组成部分有哪些？\n* 它们之间是什么关系？\n* 新手最应该先理解哪 20%？\n* 哪些内容现在可以暂时不学？\n\n不要按照教材目录罗列知识。\n\n目标是让我能够用自己的话回答：\n\n> **这个领域到底是干什么的，里面大概有什么。**\n\n---\n\n# 02｜领域语言\n\n我已经知道【领域】大概有什么，但还缺少描述它的语言。\n\n请筛选 10–20 个最值得新手先掌握的「最低必要术语」。\n\n优先选择能够帮助我：\n\n* 描述看到的现象；\n* 区分不同情况；\n* 表达“哪里好 / 哪里不好”；\n* 搜索资料；\n* 提出更准确的问题。\n\n格式：\n\n**术语 → 人话解释 → 什么时候会用 → 一个具体例子**\n\n不要做百科词典。\n\n目标是让我从：\n\n> “感觉不错 / 感觉怪怪的”\n\n进化到：\n\n> **能够准确描述自己到底看到了什么。**\n\n---\n\n# 03｜高手视角\n\n我已经知道这个领域的基础概念和语言。\n\n现在请不要继续增加知识量，而是训练我的「观察能力」。\n\n告诉我：\n\n> **新手通常在看什么，真正优秀的人在看什么？**\n\n提炼这个领域最重要的 5–8 个观察变量。\n\n每个变量说明：\n\n* 它在观察什么；\n* 为什么重要；\n* 新手通常忽略什么；\n* 高手会从中发现什么。\n\n尽量通过：\n\n**新手视角 → 高手视角**\n\n进行对比。\n\n目标是让我下次看到一个案例时，开始主动注意过去看不到的东西。\n\n---\n\n# 04｜判断框架\n\n我已经知道应该观察哪些东西。\n\n现在请教我：\n\n> **如何判断它到底做得好不好？**\n\n建立一个新手也能反复使用的判断框架。\n\n要求：\n\n1. 控制在 3–6 个判断维度；\n2. 告诉我观察顺序；\n3. 每个维度说明：\n\n   * 好是什么样；\n   * 差是什么样；\n   * 最常见的误判是什么。\n\n最后选择一个具体案例，用这套框架带我完整判断一次。\n\n不要替我下结论。\n\n重点让我理解：\n\n> **结论是如何一步步产生的。**\n\n目标是让我从：\n\n> “我喜欢 / 我不喜欢”\n\n变成：\n\n> **“我为什么认为它好 / 不好。”**\n\n---\n\n# 05｜问题升级\n\n我已经拥有这个领域的一些基础认知。\n\n现在不要继续主动给我知识。\n\n请帮助我发现：\n\n> **接下来有哪些问题值得我主动探索？**\n\n生成一棵问题树：\n\n### 第一层｜认识\n\n还有哪些重要东西我不知道？\n\n### 第二层｜机制\n\n为什么会形成这些现象？\n\n### 第三层｜判断\n\n不同方案之间应该如何比较？\n\n### 第四层｜创造\n\n如果让我自己做，我应该如何选择？\n\n每层只保留最有认知价值的问题。\n\n然后选出：\n\n**当前最值得我继续深入的 3 个问题**\n\n并解释为什么。\n\n目标是让我逐渐从：\n\n> AI 决定我学什么\n\n转变为：\n\n> **我开始知道自己想问什么。**\n\n---\n\n# 06｜实战校准\n\n停止继续讲知识。\n\n从【领域】中选择一个适合我当前水平的真实案例或任务。\n\n让我完成一次 20–30 分钟的小练习。\n\n训练必须要求我主动使用之前获得的：\n\n* 专业语言；\n* 观察变量；\n* 判断框架。\n\n流程：\n\n**先让我独立观察 / 判断\n→ 我输出答案\n→ 你分析我看到了什么\n→ 指出我遗漏了什么\n→ 告诉我高手还会看到什么\n→ 给我一次重新判断的机会**\n\n不要直接告诉我标准答案。\n\n重点寻找：\n\n> **我的观察盲区和判断盲区。**\n\n最后判断我目前处于：\n\n**知道 → 会看 → 会判断 → 会应用**\n\n哪一个阶段。\n\n---\n\n# 工作流原则\n\n这套流程不是课程目录，而是一条认知升级路径：\n\n完全不知道\n↓\n知道这里有什么\n↓\n拥有描述语言\n↓\n知道应该看什么\n↓\n能够判断好坏\n↓\n知道应该问什么\n↓\n通过实践不断校准\n↓\n形成自己的观点与方法\n\n任何阶段如果已经掌握，就直接跳过。\n\n如果某个阶段没有掌握，不要因为流程已经走过就继续向下。\n\n判断是否进入下一阶段的唯一标准是：\n\n> **我是否已经获得了新的能力，而不是是否已经看完了一段内容。**",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836806843,
+        "updatedAt": 1788836806843,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "Ov4OGUwAbIPJVPYd2BJgv",
         "title": "场景信息架构设计师",
         "body": "你现在扮演一名「场景信息架构设计师」。\n\n我会给你一个大场景：{{大场景}}\n\n你的任务不是直接罗列子场景，而是先用“三维穷举坐标系”系统拆解这个大场景，尽量发现重要遗漏，然后再收敛成适合 Prompt OS 使用的信息架构。\n\n最终信息架构必须是：\n\n大场景 → 子场景 → 流程\n\n---\n\n# 一、先建立三维穷举坐标系\n\n请先从 3 个维度拆解这个大场景。\n\n## 维度 1：按任务生命周期拆\n\n请回答：\n\n用户从开始到完成这个大场景下的任务，通常会经历哪些阶段？\n\n要求：\n\n- 必须按真实任务流程拆\n- 阶段之间要有先后顺序\n- 不要按抽象能力分类\n- 不要只列名词，要说明每个阶段的用户目标\n\n例如：\n\n开始准备 → 信息收集 → 分析判断 → 方案生成 → 执行落地 → 检查优化 → 复盘沉淀\n\n但你不能机械套用这个例子，要根据我给你的大场景重新设计。\n\n## 维度 2：按 AI 能力动作拆\n\n请回答：\n\n在这个大场景中，用户会为了什么目的对 AI 发起动作？\n\n请尽量穷举常见 AI 动作，例如但不限于：\n\n理解、澄清、提问、拆解、分析、生成、改写、对比、审查、检查、测试、解释、定位问题、优化、总结、沉淀。\n\n要求：\n\n- 不要只列动作名\n- 要说明这些动作在该大场景中分别解决什么问题\n- 删除和该大场景无关的动作\n- 补充该大场景特有的 AI 动作\n\n## 维度 3：按操作对象拆\n\n请回答：\n\n在这个大场景中，AI 主要操作哪些对象？\n\n对象可以是：\n\n资料、问题、需求、用户、内容、页面、代码、数据、文档、图片、视频、计划、流程、报告、表格、Prompt、经验等。\n\n要求：\n\n- 必须根据大场景重新归纳对象\n- 不要泛泛列所有对象\n- 每个对象都要说明用户为什么会处理它\n- 重点发现容易被遗漏的对象\n\n---\n\n# 二、用三维交叉发现遗漏\n\n请基于上面三个维度做交叉检查。\n\n请输出：\n\n1. 生命周期中哪些阶段容易被遗漏\n2. AI 能力动作中哪些动作还没有对应到具体场景\n3. 操作对象中哪些对象还没有被覆盖\n4. 哪些“阶段 × 动作 × 对象”的组合值得变成子场景或流程\n5. 哪些组合虽然存在，但不适合放进 Prompt OS\n\n要求：\n\n- 不要把所有交叉组合都列出来\n- 只保留对用户完成任务有价值的组合\n- 重点发现高频、刚需、容易卡住、适合用 Prompt 解决的场景\n- 不要为了完整性制造低价值分类\n\n---\n\n# 三、收敛成 Prompt OS 信息架构\n\n请基于三维分析结果，把这个大场景整理成适合 Prompt OS 使用的信息架构。\n\n## 1. 一级大场景定义\n\n请输出：\n\n1. 大场景名称\n2. 核心用户目标\n3. 用户进入这个场景时，通常想完成什么真实任务\n4. 这个大场景不应该包含哪些内容，避免边界过宽\n\n## 2. 子场景拆解\n\n请把这个大场景拆成若干个子场景。\n\n每个子场景需要包含：\n\n1. 子场景名称\n2. 子场景说明\n3. 用户进入这个子场景时的典型状态\n4. 这个子场景最终要产出的结果\n5. 这个子场景主要覆盖了三维坐标系中的哪些内容\n\n要求：\n\n- 子场景必须按真实任务分类\n- 子场景之间尽量不要重叠\n- 子场景数量控制在 6 到 12 个\n- 每个子场景都必须是用户能一眼理解的任务入口\n- 不要按“理解、生成、审查”这种 AI 动作直接当子场景\n- AI 动作应该服务于任务，而不是成为目录本身\n\n## 3. 每个子场景下的流程拆解\n\n请继续为每个子场景拆出完成任务所需的流程。\n\n每个流程需要包含：\n\n1. 流程名称\n2. 流程目标\n3. 用户需要提供什么输入\n4. 这个流程应该产出什么结果\n5. 这个流程最容易卡住或做错的地方\n6. 这个流程适合配置哪些类型的 Prompt\n\n要求：\n\n- 流程必须按用户实际完成任务的先后顺序排列\n- 每个流程都要有明确产出\n- 不要把多个目标混在一个流程里\n- 每个子场景下的流程控制在 4 到 8 个\n- 每个流程后续都要能生成不少于 3 条 Prompt\n\n---\n\n# 四、完整性检查\n\n请最后检查这套信息架构是否覆盖充分。\n\n请回答：\n\n1. 生命周期是否完整\n2. 关键 AI 动作是否覆盖\n3. 关键操作对象是否覆盖\n4. 是否存在重复子场景\n5. 是否存在过于抽象、用户不知道怎么点的子场景\n6. 是否存在缺少产出的流程\n7. 是否存在不适合配置 Prompt 的流程\n\n如果发现问题，请直接修正信息架构。\n\n---\n\n# 五、最终信息架构总览\n\n请最后用树状结构输出最终版本：\n\n大场景\n├─ 子场景 1\n│  ├─ 流程 1\n│  ├─ 流程 2\n│  └─ 流程 3\n├─ 子场景 2\n│  ├─ 流程 1\n│  ├─ 流程 2\n│  └─ 流程 3\n\n---\n\n# 输出要求\n\n- 不要直接给一堆提示词\n- 这一步只负责生成信息架构\n- 不要按抽象知识分类\n- 不要按 AI 能力动作机械分类\n- 最终目录必须符合用户完成任务的路径\n- 每个子场景都要对应真实任务\n- 每个流程都要能继续生成 Prompt\n- 结果要适合直接放进 Prompt OS",
@@ -1182,6 +1260,32 @@
         "boundContextIds": []
       },
       {
+        "id": "XmNCmBmMmb9JpkIB0gVBj",
+        "title": "高手视角：学会「看什么」",
+        "body": "假设一个真正优秀的【领域】专家正在观察一个作品、案例或问题。\n\n请告诉我：\n\n**新手通常在看什么，而高手实际上在看什么？**\n\n提炼出这个领域最重要的 5–10 个「观察变量 / 判断维度」。\n\n对每一个说明：\n\n* 它是什么；\n* 为什么重要；\n* 新手容易忽略什么；\n* 高手会从中发现什么。\n\n重点不是教知识，而是训练我获得这个领域的「观察视角」。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836367409,
+        "updatedAt": 1788836384714,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "YRrItBoqPDslEd8JYqvS8",
         "title": "竞品分析",
         "body": "你是一名为产品决策服务的资深行业分析师。我要为【产品/功能：____】做调研。\n\n请联网检索并交付一份决策导向的调研简报，覆盖：\n1. 竞品全景：列出 5-8 个直接/间接竞品，各自如何解决核心问题，定位、关键功能、定价模式。\n2. 做法差异：把竞品在关键环节上的不同做法列成对比表，并标注各自的取舍。\n3. 用户声音：用户在论坛/评论/社媒里反复抱怨的痛点 Top 5，附来源。\n4. 空白与机会：明显没被满足的需求，或大家做得都很烂的地方。\n\n要求：\n- 每个关键结论附可点击来源链接；区分\"事实\"与\"你的推断\"。\n- 不要堆砌，只给影响产品决策的信息。\n- 最后用 5 条要点总结\"对我们 PRD 的启示\"。",
@@ -1209,7 +1313,7 @@
       },
       {
         "id": "Yf4vYnbwjelu-NwfZaMJ5",
-        "title": "阶段2：提炼高手心法",
+        "title": "提炼高手心法",
         "body": "阶段2：提炼高手心法\n\n基于刚才的能力地图，请提炼这个领域最重要的【20/50/100】条高手心法。\n\n这里的心法不是“努力、坚持、多练习”这种通用建议，而是：\n\n遇到真实问题时，可以直接帮助我做判断的原则。\n\n要求：\n\n每条一句话；\n不重复；\n按重要性排序；\n标明它属于哪个能力模块；\n优先写高手和普通人真正存在认知差异的地方；\n如果一个原则只是特定情况下成立，请注明适用条件。\n\n暂时不要展开详细解释。",
         "summary": "",
         "primaryScenario": [],
@@ -1229,7 +1333,7 @@
         "useCount": 0,
         "lastUsedAt": null,
         "createdAt": 1788231470725,
-        "updatedAt": 1788231470725,
+        "updatedAt": 1788836394298,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -1334,6 +1438,32 @@
         "lastUsedAt": null,
         "createdAt": 1780477466917,
         "updatedAt": 1780477466917,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "bhXmnXK7nYzD09a09tnDH",
+        "title": "最低必要术语库",
+        "body": "基于【领域】，请帮我建立一套「最低必要术语库」。\n\n只筛选 25-40 个最值得新手先掌握的词，优先选择能够帮助我：\n\n* 描述现象；\n* 区分差异；\n* 判断好坏；\n* 搜索资料；\n* 向专业人士提问。\n\n每个术语用：\n\n**术语｜一句人话解释｜什么时候会用｜一个具体例子**\n\n不要做百科词典，也不要塞入现阶段用不到的专业词。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836310471,
+        "updatedAt": 1788836310471,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -1594,6 +1724,32 @@
         "lastUsedAt": null,
         "createdAt": 1779778227975,
         "updatedAt": 1779778227975,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "kWPCiNWln9fLXJObNS14N",
+        "title": "先知道：这个世界里有什么",
+        "body": "我对【领域】几乎完全不了解，甚至不知道有哪些问题值得问。\n\n请先不要展开大量细节，帮我建立一张这个领域的「认知地图」。\n\n重点告诉我：\n\n1. 这个领域最核心是在解决什么问题？\n2. 它主要由哪些关键模块组成？\n3. 这些模块之间是什么关系？\n4. 哪些是新手必须先理解的 20% 核心知识？\n5. 哪些内容现阶段可以暂时忽略？\n\n目标不是让我学会这个领域，而是让我先知道：**这个世界里有什么。**\n",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788835903749,
+        "updatedAt": 1788836250092,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -7129,6 +7285,32 @@
         "boundContextIds": []
       },
       {
+        "id": "suFICNLdQ4TEToePvcZOf",
+        "title": "建立高价值问题树",
+        "body": "基于我目前对【领域】的基础理解，请帮我建立一棵「高价值问题树」。\n\n按照四层组织：\n\n1. **认识**：这里有什么？\n2. **理解**：为什么会这样？\n3. **判断**：什么更好？为什么？\n4. **创造**：如果让我自己做，应该如何选择？\n\n每层给我 5 个最值得继续追问的问题。\n\n不要生成泛泛的问题。\n\n优先选择那些：\n\n**回答一个，就能明显提升我理解能力的问题。**\n\n同时指出其中最值得我现在优先探索的 3 个问题。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836563635,
+        "updatedAt": 1788836563635,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
         "id": "tX5SblDYLZ5zHBd6EMu08",
         "title": "Claude Code / Codex 自测版",
         "body": "请你先不要写新代码，而是作为一个严格的 QA + 产品经理 + 技术审查员，对当前项目进行完整自测。请先阅读 PRD等相关文档，再阅读代码，然后启动项目或用可行方式走查核心流程。你需要对照 PRD 判断每个功能是否真的完成，而不是根据文件名、组件名或界面截图做判断。凡是不能实际跑通、不能复现、没有真实数据流、没有状态保存、没有异常处理的，都不能算完成。\n\n请按照「PRD 要求 → 当前实现 → 验证方式 → 验证结果 → 问题等级 → 修复建议」的格式输出。请特别检查是否存在为了赶进度而写的假实现、临时代码、硬编码、mock 数据、未连接接口、未接入状态管理、没有测试覆盖的部分。最后给出一个明确判断：当前版本是否可以算完成，是否可以交付试用，如果不能，最少还需要修哪些问题。",
@@ -7281,6 +7463,32 @@
         "lastUsedAt": null,
         "createdAt": 1788249154331,
         "updatedAt": 1788249163853,
+        "pendingReview": false,
+        "boundContextIds": []
+      },
+      {
+        "id": "zEzUjcgltEBA4nT9T9Ysd",
+        "title": "请帮我建立【领域】的新手判断框架。",
+        "body": "请帮我建立【领域】的新手判断框架。\n\n当我面对一个【作品 / 产品 / 案例 / 方案】时：\n\n应该按照什么顺序观察和判断？\n\n请给我一个简单可重复使用的框架，例如：\n\n**先看 A → 再看 B → 再看 C → 最后看 D**\n\n每个维度告诉我：\n\n* 好的表现是什么；\n* 差的表现是什么；\n* 新手最容易被什么表象欺骗。\n\n最后选择一个具体案例，带我完整走一遍判断过程。\n\n目标是让我开始拥有自己的判断依据，而不是只依赖「感觉」。",
+        "summary": "",
+        "primaryScenario": [],
+        "secondaryScenarios": [],
+        "taskType": "生成",
+        "inputRequirements": "",
+        "outputFormat": "",
+        "upstreamPrompts": [],
+        "downstreamPrompts": [],
+        "recommendedCombinations": [],
+        "boundaries": "",
+        "tags": [],
+        "difficulty": "初级",
+        "valueLevel": "高频",
+        "shareable": true,
+        "isFavorited": false,
+        "useCount": 0,
+        "lastUsedAt": null,
+        "createdAt": 1788836472233,
+        "updatedAt": 1788836472233,
         "pendingReview": false,
         "boundContextIds": []
       },
@@ -7761,18 +7969,30 @@
             "description": "",
             "promptIds": [
               "Vdqr6xsNKTBh78-vk3jQy",
-              "Dz4UmfxBI7gnYVJnLs9-D"
+              "Dz4UmfxBI7gnYVJnLs9-D",
+              "47ZokAELdsKBRGE-ewIc9",
+              "kWPCiNWln9fLXJObNS14N"
             ],
             "order": 0
+          },
+          {
+            "id": "4eAdB3H2kXRI-_EEiXvK7",
+            "name": "术语解锁",
+            "description": "",
+            "promptIds": [
+              "bhXmnXK7nYzD09a09tnDH"
+            ],
+            "order": 1
           },
           {
             "id": "rgqUPTneMLGLl_UAMwLcf",
             "name": "提炼高手心法",
             "description": "",
             "promptIds": [
-              "Yf4vYnbwjelu-NwfZaMJ5"
+              "Yf4vYnbwjelu-NwfZaMJ5",
+              "XmNCmBmMmb9JpkIB0gVBj"
             ],
-            "order": 1
+            "order": 2
           },
           {
             "id": "ujqeRtID9CRA81Eo9RSTD",
@@ -7784,34 +8004,46 @@
               "gQ7TqewWNfEgswH-sgqRs",
               "saInb3kIA6QBsUz6Zs-N-"
             ],
-            "order": 2
+            "order": 3
           },
           {
             "id": "E9rZGMjKs_XqAk8a3ihAj",
             "name": "刻意练习",
             "description": "",
             "promptIds": [
-              "B76_SCaMUEYaEd0fUdVqK"
+              "B76_SCaMUEYaEd0fUdVqK",
+              "zEzUjcgltEBA4nT9T9Ysd"
             ],
-            "order": 3
+            "order": 4
           },
           {
             "id": "qZNtnRGpwMKMw0kmMRRfY",
             "name": "实战练习",
             "description": "",
             "promptIds": [
-              "1Wew1G6SD545nnYPC_8Se"
+              "1Wew1G6SD545nnYPC_8Se",
+              "Gp1wJExf2fEZThlFRRkT7"
             ],
-            "order": 4
+            "order": 5
           },
           {
             "id": "dqDJpoO5rlK9eBRlKbpCI",
             "name": "学习导航",
             "description": "",
             "promptIds": [
-              "9nLKn2l4tjouvTFdglm48"
+              "9nLKn2l4tjouvTFdglm48",
+              "suFICNLdQ4TEToePvcZOf"
             ],
-            "order": 5
+            "order": 6
+          },
+          {
+            "id": "fffLYUelvgg_z92bGyH-u",
+            "name": "通用全流程版",
+            "description": "",
+            "promptIds": [
+              "OWsnPTNH7kGV_U3nIyelz"
+            ],
+            "order": 7
           }
         ],
         "tags": [],
@@ -7820,7 +8052,7 @@
         "lastUsedAt": null,
         "order": 0,
         "createdAt": 1788231306251,
-        "updatedAt": 1788249525694
+        "updatedAt": 1788836806861
       },
       {
         "id": "mYwnn1Tb4QklSunb_4vMT",
